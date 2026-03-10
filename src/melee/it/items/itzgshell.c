@@ -45,14 +45,14 @@ void it_802DDB38(Item_GObj* gobj)
     Vec v;
     HSD_JObj* jobj;
     PAD_STACK(4);
-    if (ip->xDD4_itemVar.zgshell.xDF8 <= 0.0f) {
+    if (ip->xDD4_itemVar.zgshell.xDF8 <= 0.0F) {
         jobj = GET_JOBJ(gobj);
         v = attrs->x3C;
         v.x *= -ip->facing_dir;
         efAsync_Spawn(gobj, &GET_ITEM(gobj)->xBC0, 2, 1029, jobj, &v);
         ip->xDD4_itemVar.zgshell.xDF8 = attrs->x38;
     } else {
-        ip->xDD4_itemVar.zgshell.xDF8 -= 1.0f;
+        ip->xDD4_itemVar.zgshell.xDF8 -= 1.0F;
     }
 }
 
@@ -61,8 +61,8 @@ void it_802DDBE8(Item_GObj* gobj)
     Item* ip = GET_ITEM(gobj);
     itGShell_Attrs* attrs = ip->xC4_article_data->x4_specialAttributes;
     if (ip->xDD4_itemVar.zgshell.xE08_b0) {
-        ip->xDD4_itemVar.zgshell.xDFC -= 1.0f;
-        if (ip->xDD4_itemVar.zgshell.xDFC <= 0.0f) {
+        ip->xDD4_itemVar.zgshell.xDFC -= 1.0F;
+        if (ip->xDD4_itemVar.zgshell.xDFC <= 0.0F) {
             ip->xDD4_itemVar.zgshell.xE08_b0 = 0;
             ip->xDD4_itemVar.zgshell.xDFC = attrs->x28;
             it_8027572C(gobj, 0);
@@ -79,7 +79,7 @@ void fn_802DDC8C(Item_GObj* gobj)
     itGShell_Attrs* attrs = ip->xC4_article_data->x4_specialAttributes;
     it_80275D5C(gobj, &ip->xC0C);
     if (ABS(ip->x40_vel.x) < attrs->x8) {
-        ip->x40_vel.x = ip->x40_vel.y = ip->x40_vel.z = 0.0f;
+        ip->x40_vel.x = ip->x40_vel.y = ip->x40_vel.z = 0.0F;
         if (!it_80277040(gobj)) {
             it_802DE0F0(gobj);
         } else {
@@ -142,7 +142,7 @@ bool itZrshell_UnkMotion1_Anim(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
     if (ip->xDD4_itemVar.zgshell.xE1C_b0 && ip->xDD0_flag.b0 != 1) {
-        if (ip->xDD4_itemVar.zgshell.xE04 <= 0.0f) {
+        if (ip->xDD4_itemVar.zgshell.xE04 <= 0.0F) {
             it_80274CAC(gobj);
             ip->jumped_on = fn_802DFE7C;
         } else {
@@ -204,8 +204,8 @@ bool itZrshell_UnkMotion3_Anim(Item_GObj* gobj)
     Item* ip = gobj->user_data;
     itGShell_Attrs* attrs = ip->xC4_article_data->x4_specialAttributes;
     if (ip->xDD4_itemVar.zgshell.xE08_b0) {
-        ip->xDD4_itemVar.zgshell.xDFC -= 1.0f;
-        if (ip->xDD4_itemVar.zgshell.xDFC <= 0.0f) {
+        ip->xDD4_itemVar.zgshell.xDFC -= 1.0F;
+        if (ip->xDD4_itemVar.zgshell.xDFC <= 0.0F) {
             ip->xDD4_itemVar.zgshell.xE08_b0 = 0;
             ip->xDD4_itemVar.zgshell.xDFC = attrs->x28;
             it_8027572C(gobj, 0);
@@ -289,12 +289,12 @@ bool itZrshell_UnkMotion6_Coll(Item_GObj* gobj)
 bool itZrshell_UnkMotion8_Anim(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
-    if (ip->xDD4_itemVar.zgshell.xDF4 <= 0.0f) {
+    if (ip->xDD4_itemVar.zgshell.xDF4 <= 0.0F) {
         if (!ip->xDCD_flag.b5) {
             it_80275444(gobj);
         }
     } else {
-        ip->xDD4_itemVar.zgshell.xDF4 -= 1.0f;
+        ip->xDD4_itemVar.zgshell.xDF4 -= 1.0F;
     }
     it_802DDBE8(gobj);
     if (ip->msid == 6 || ip->msid == 5) {
@@ -351,7 +351,7 @@ bool itZrshell_UnkMotion9_Coll(Item_GObj* gobj)
 void itZrshell_UnkMotion11_Phys(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->x40_vel.y > 0.0f) {
+    if (ip->x40_vel.y > 0.0F) {
         it_802762BC(ip);
     }
 }
@@ -434,8 +434,8 @@ void itZGShell_Logic11_Destroyed(Item_GObj* gobj)
 void it_802DFFA0(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->xDD4_itemVar.zgshell.vel.x = 0.0f;
-    ip->xDD4_itemVar.zgshell.vel.y = 0.0f;
+    ip->xDD4_itemVar.zgshell.vel.x = 0.0F;
+    ip->xDD4_itemVar.zgshell.vel.y = 0.0F;
     ip->xDD4_itemVar.zgshell.vel.z = 0.0F;
 }
 

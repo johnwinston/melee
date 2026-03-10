@@ -105,7 +105,7 @@ void itTincle_UnkMotion3_Phys(Item_GObj* gobj)
     Item* ip = GET_ITEM(gobj);
     if (ip->xDD4_itemVar.tincle.x20 == 0) {
         ip->pos.y = ip->xDD4_itemVar.tincle.x4C;
-        ip->x40_vel.y = 0.0f;
+        ip->x40_vel.y = 0.0F;
         it_802EBE5C(gobj);
     } else {
         ip->x40_vel.y += ip->xDD4_itemVar.tincle.x38;
@@ -144,11 +144,11 @@ bool itTincle_UnkMotion5_Anim(Item_GObj* gobj)
 void itTincle_UnkMotion5_Phys(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->x40_vel.y <= 0.0f) {
-        ip->x40_vel.z = 0.0f;
-        ip->x40_vel.y = 0.0f;
-        ip->x40_vel.x = 0.0f;
-        ip->xDD4_itemVar.tincle.x38 = 0.0f;
+    if (ip->x40_vel.y <= 0.0F) {
+        ip->x40_vel.z = 0.0F;
+        ip->x40_vel.y = 0.0F;
+        ip->x40_vel.x = 0.0F;
+        ip->xDD4_itemVar.tincle.x38 = 0.0F;
         ip->xDD4_itemVar.tincle.x2C = 0;
         ip->xDD4_itemVar.tincle.x20 = 0;
         it_802EBA00(gobj);
@@ -167,9 +167,9 @@ void it_802EC18C(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
     PAD_STACK(8);
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_802756D0(gobj);
     ip->xDD4_itemVar.tincle.x20 = 3;
     Item_80268E5C(gobj, 6, 0x12);
@@ -180,9 +180,9 @@ void it_802EC1F4(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
     PAD_STACK(8);
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_802756D0(gobj);
     ip->xDD4_itemVar.tincle.x20 = 0;
     Item_80268E5C(gobj, 7, 0x12);
@@ -198,7 +198,7 @@ void itTincle_UnkMotion7_Phys(Item_GObj* gobj) {}
 void it_802EC35C(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->pos.z = -10.0f;
+    ip->pos.z = -10.0F;
     Item_80268E5C(gobj, 8, ITEM_ANIM_UPDATE);
 }
 
@@ -223,13 +223,13 @@ bool itTincle_UnkMotion8_Coll(Item_GObj* gobj)
 void it_802EC3F4(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     ip->xDC8_word.flags.x1A = 0;
-    ip->x70_nudge.z = 0.0f;
-    ip->x70_nudge.y = 0.0f;
-    ip->x70_nudge.x = 0.0f;
+    ip->x70_nudge.z = 0.0F;
+    ip->x70_nudge.y = 0.0F;
+    ip->x70_nudge.x = 0.0F;
     Item_80268E5C(gobj, 9, ITEM_ANIM_UPDATE);
     it_802EC9E8(gobj);
 }
@@ -311,11 +311,11 @@ bool itTincle_UnkMotion12_Anim(Item_GObj* gobj)
 void itTincle_UnkMotion12_Phys(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->x40_vel.y <= 0.0f) {
-        ip->x40_vel.z = 0.0f;
-        ip->x40_vel.y = 0.0f;
-        ip->x40_vel.x = 0.0f;
-        ip->xDD4_itemVar.tincle.x38 = 0.0f;
+    if (ip->x40_vel.y <= 0.0F) {
+        ip->x40_vel.z = 0.0F;
+        ip->x40_vel.y = 0.0F;
+        ip->x40_vel.x = 0.0F;
+        ip->xDD4_itemVar.tincle.x38 = 0.0F;
         ip->xDD4_itemVar.tincle.x2C = 0;
         ip->xDD4_itemVar.tincle.x20 = 0;
         it_802EBA00(gobj);

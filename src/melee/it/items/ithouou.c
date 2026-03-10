@@ -55,7 +55,7 @@ bool itHouou_UnkMotion1_Coll(Item_GObj* gobj)
 void it_802D2668(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->xDD4_itemVar.pokemon.xE44 = 0.0f;
+    ip->xDD4_itemVar.pokemon.xE44 = 0.0F;
     Item_80268E5C(gobj, 2, ITEM_ANIM_UPDATE);
     ip->entered_hitlag = efLib_PauseAll;
     ip->exited_hitlag = efLib_ResumeAll;
@@ -132,7 +132,7 @@ void itHouou_UnkMotion3_Phys(Item_GObj* gobj)
         return;
     }
 
-    ip->x40_vel.z = 0.0f;
+    ip->x40_vel.z = 0.0F;
     it_802D290C(gobj);
 }
 
@@ -182,8 +182,8 @@ void itHouou_UnkMotion4_Phys(Item_GObj* gobj)
     ip->xDD4_itemVar.pokemon.xE44 += attr->x1C;
     ip->x40_vel.y += ip->xDD4_itemVar.pokemon.xE44;
 
-    if (ip->pos.y < (*(f32*)((u8*)ip + 0xE3C)) - 1.0f) {
-        ip->x40_vel.y = 0.0f;
+    if (ip->pos.y < (*(f32*)((u8*)ip + 0xE3C)) - 1.0F) {
+        ip->x40_vel.y = 0.0F;
     }
 }
 
@@ -238,7 +238,7 @@ void it_802D2BE0(Item_GObj* gobj)
     Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
     ip->entered_hitlag = efLib_PauseAll;
     ip->exited_hitlag = efLib_ResumeAll;
-    it_80273670(gobj, 0, 0.0f);
+    it_80273670(gobj, 0, 0.0F);
 }
 
 bool it_802D2C54(Item_GObj* gobj)
@@ -288,10 +288,10 @@ void it_802D2EF0(Item_GObj* gobj)
 bool it_802D2F3C(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->xD44_lifeTimer <= 0.0f) {
+    if (ip->xD44_lifeTimer <= 0.0F) {
         return true;
     }
-    ip->xD44_lifeTimer -= 1.0f;
+    ip->xD44_lifeTimer -= 1.0F;
     return false;
 }
 

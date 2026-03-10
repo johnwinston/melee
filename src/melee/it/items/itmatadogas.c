@@ -26,7 +26,7 @@ void it_802CAFD4(Item_GObj* gobj)
     item->xDD4_itemVar.matadogas.x64 = 0;
     it_80279CDC(gobj, attrs->x0);
     it_802CB350(gobj);
-    HSD_JObjSetRotationY(jobj, 0.0f);
+    HSD_JObjSetRotationY(jobj, 0.0F);
     Item_8026AE84(item, 0x2715, 0x7f, 0x40);
 }
 
@@ -108,7 +108,7 @@ bool itMatadogas_UnkMotion2_Coll(Item_GObj* gobj)
 void it_2725_Logic32_Spawned(Item_GObj* gobj)
 {
     HSD_JObj* jobj = gobj->hsd_obj;
-    f32 scale = 1.0f;
+    f32 scale = 1.0F;
     PAD_STACK(4);
     efSync_Spawn(0x45B, gobj, jobj, &scale);
     efSync_Spawn(0x45D, gobj, jobj, &scale);
@@ -121,7 +121,7 @@ void it_2725_Logic33_Spawned(Item_GObj* gobj)
     f32 scale;
     HSD_JObj* jobj = gobj->hsd_obj;
     PAD_STACK(4);
-    scale = 1.0f;
+    scale = 1.0F;
     efSync_Spawn(0x45C, gobj, jobj, &scale);
     efSync_Spawn(0x45E, gobj, jobj, &scale);
     it_802CB798(gobj);
@@ -137,17 +137,17 @@ void itMatadogas_Logic33_EvtUnk(Item_GObj* gobj, Item_GObj* ref_gobj)
 bool it_802CB810(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->xD44_lifeTimer <= 0.0f) {
+    if (ip->xD44_lifeTimer <= 0.0F) {
         return true;
     }
-    ip->xD44_lifeTimer -= 1.0f;
+    ip->xD44_lifeTimer -= 1.0F;
     return false;
 }
 
 void it_802CB844(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
-    f32 scale = 0.0f;
+    f32 scale = 0.0F;
     ItemKind kind = ip->kind;
     itMatadogasAttributes* attrs = ip->xC4_article_data->x4_specialAttributes;
 

@@ -66,7 +66,7 @@ void it_802D43EC(Item_GObj* gobj)
     ip->xDD4_itemVar.hitodeman.x64 = diff * randf + attrs->x10;
 
     if (HSD_Randi(2) != 0) {
-        ip->xDD4_itemVar.hitodeman.x60 *= -1.0f;
+        ip->xDD4_itemVar.hitodeman.x60 *= -1.0F;
     }
 }
 
@@ -196,7 +196,7 @@ void it_802D4F78(Item_GObj* gobj)
 
     ip = GET_ITEM(gobj);
     jobj = GET_JOBJ(gobj);
-    f = 1.0f;
+    f = 1.0F;
     Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
     ip->entered_hitlag = efLib_PauseAll;
     ip->exited_hitlag = efLib_ResumeAll;

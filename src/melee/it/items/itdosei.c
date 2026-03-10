@@ -19,14 +19,14 @@
 void fn_80281390(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     Item_80268E5C(gobj, 0, 3);
     {
         HSD_JObj* jobj = gobj->hsd_obj;
-        ip->x5D0_animFrameSpeed = 1.0f;
-        lb_8000BA0C(jobj, 1.0f);
+        ip->x5D0_animFrameSpeed = 1.0F;
+        lb_8000BA0C(jobj, 1.0F);
     }
     ip->owner = NULL;
 }
@@ -46,15 +46,15 @@ bool itDosei_UnkMotion0_Coll(Item_GObj* gobj)
 void fn_80281734(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
-    if (ip->facing_dir == 1.0f) {
-        if (ip->xDD4_itemVar.dosei.xDF8.x < 0.0f) {
+    if (ip->facing_dir == 1.0F) {
+        if (ip->xDD4_itemVar.dosei.xDF8.x < 0.0F) {
             it_80281C6C(gobj);
             return;
         }
         it_802817A0(gobj);
         return;
     }
-    if (ip->xDD4_itemVar.dosei.xDF8.x > 0.0f) {
+    if (ip->xDD4_itemVar.dosei.xDF8.x > 0.0F) {
         it_80281C6C(gobj);
         return;
     }
@@ -110,7 +110,7 @@ bool itDosei_UnkMotion1_Coll(Item_GObj* gobj)
             Item* temp_r4 = gobj->user_data;
             f32 var_f1 = M2C_FIELD(temp_r4, f32*, 0x4CC);
 
-            if (var_f1 < 0.0f) {
+            if (var_f1 < 0.0F) {
                 var_f1 = -var_f1;
             }
 
@@ -237,8 +237,8 @@ void it_3F14_Logic7_EnteredAir(Item_GObj* gobj)
     Item_80268E5C(gobj, motion_id, 3);
     {
         HSD_JObj* jobj = gobj->hsd_obj;
-        ip->x5D0_animFrameSpeed = 1.0f;
-        lb_8000BA0C(jobj, 1.0f);
+        ip->x5D0_animFrameSpeed = 1.0F;
+        lb_8000BA0C(jobj, 1.0F);
     }
     ip->owner = NULL;
 }
@@ -295,15 +295,15 @@ bool itDosei_UnkMotion8_Coll(Item_GObj* gobj)
 void fn_80282CD4(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_802762B0(ip);
     Item_80268E5C(gobj, 7, 3);
     {
         HSD_JObj* jobj = gobj->hsd_obj;
-        ip->x5D0_animFrameSpeed = 1.0f;
-        lb_8000BA0C(jobj, 1.0f);
+        ip->x5D0_animFrameSpeed = 1.0F;
+        lb_8000BA0C(jobj, 1.0F);
     }
     ip->owner = NULL;
 }

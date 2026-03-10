@@ -36,7 +36,7 @@ void itOldkuri_UnkMotion0_Phys(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
     if (ip->xDD4_itemVar.oldkuri.xDF8 == 0) {
-        if (ip->facing_dir == 1.0f) {
+        if (ip->facing_dir == 1.0F) {
             it_802D775C(gobj);
         } else {
             it_802D758C(gobj);
@@ -44,7 +44,7 @@ void itOldkuri_UnkMotion0_Phys(Item_GObj* gobj)
     } else {
         ip->xDD4_itemVar.oldkuri.xDF8--;
     }
-    it_8027C0A8(gobj, 0.0f, 5.0f);
+    it_8027C0A8(gobj, 0.0F, 5.0F);
 }
 
 bool itOldkuri_UnkMotion0_Coll(Item_GObj* gobj)
@@ -59,9 +59,9 @@ void it_802D758C(Item_GObj* gobj)
     itOldkuriAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
     ip->xDD4_itemVar.oldkuri.xDF4 = ip->facing_dir * ((f32*) attr->x0)[1];
     ip->x40_vel.x = ip->xDD4_itemVar.oldkuri.xDF4;
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->facing_dir = -1.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->facing_dir = -1.0F;
     ip->xDD4_itemVar.oldkuri.xDFC = 0;
     it_802D848C(gobj, 1, ITEM_ANIM_UPDATE);
 }
@@ -71,7 +71,7 @@ bool itOldkuri_UnkMotion1_Anim(Item_GObj* gobj)
     Item* ip = GET_ITEM(gobj);
 
     if (!it_80272C6C(gobj)) {
-        if (ip->facing_dir == 0.0f) {
+        if (ip->facing_dir == 0.0F) {
             ip->xDD4_itemVar.oldkuri.xDFC = 1;
             it_802D848C(gobj, 1, 0x12);
         } else {
@@ -100,9 +100,9 @@ void it_802D775C(Item_GObj* gobj)
     itOldkuriAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
     ip->xDD4_itemVar.oldkuri.xDF4 = ip->facing_dir * ((f32*) attr->x0)[1];
     ip->x40_vel.x = ip->xDD4_itemVar.oldkuri.xDF4;
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->facing_dir = 1.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->facing_dir = 1.0F;
     ip->xDD4_itemVar.oldkuri.xDFC = 0;
     it_802D848C(gobj, 2, ITEM_ANIM_UPDATE);
 }
@@ -140,7 +140,7 @@ bool itOldkuri_UnkMotion3_Coll(Item_GObj* gobj)
 void it_802D7AF0(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    if (ip->facing_dir > 0.0f) {
+    if (ip->facing_dir > 0.0F) {
         it_802D848C(gobj, 4, 0x12);
     } else {
         it_802D848C(gobj, 3, 0x12);
@@ -195,7 +195,7 @@ void it_2725_Logic0_Dropped(Item_GObj* gobj)
     it_8027CBA4(gobj);
     {
         Item* ip = GET_ITEM(gobj);
-        if (ip->facing_dir > 0.0f) {
+        if (ip->facing_dir > 0.0F) {
             it_802D848C(gobj, 4, ITEM_ANIM_UPDATE | ITEM_HIT_PRESERVE);
         } else {
             it_802D848C(gobj, 3, ITEM_ANIM_UPDATE | ITEM_HIT_PRESERVE);
@@ -210,7 +210,7 @@ void it_2725_Logic0_Thrown(Item_GObj* gobj)
     it_80274C88(gobj);
     ip->xDD4_itemVar.oldkuri.xDF8 = 0;
     Item_80268E5C(gobj, 6, ITEM_ANIM_UPDATE);
-    it_8027C56C(gobj, 0.0f);
+    it_8027C56C(gobj, 0.0F);
 }
 
 bool itOldkuri_UnkMotion6_Anim(Item_GObj* gobj)
@@ -332,7 +332,7 @@ void it_802D82C4(Item_GObj* gobj)
     it_802762BC(ip);
     it_8027B964(gobj, false);
     ip->xDD4_itemVar.oldkuri.xDEC = 0;
-    it_8027C56C(gobj, 0.0f);
+    it_8027C56C(gobj, 0.0F);
     Item_80268E5C(gobj, 0xA, ITEM_ANIM_UPDATE);
 }
 
@@ -357,7 +357,7 @@ void it_802D839C(Item_GObj* gobj)
     it_802762BC(ip);
     it_8027BA54(gobj, &ip->x40_vel);
     it_802762BC(ip);
-    it_8027C56C(gobj, 0.0f);
+    it_8027C56C(gobj, 0.0F);
     Item_80268E5C(gobj, 0xB, ITEM_ANIM_UPDATE);
 }
 

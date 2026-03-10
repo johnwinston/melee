@@ -16,14 +16,14 @@ bool it_802C4F50(Item_GObj* gobj, CollData* cd)
     Item* ip = GET_ITEM(gobj);
     bool ret = false;
     it_8026DA08(gobj);
-    if (ip->x40_vel.y > 0.0f) {
+    if (ip->x40_vel.y > 0.0F) {
         if (cd->env_flags & Collide_CeilingMask) {
             ret = true;
         }
     } else if (cd->env_flags & Collide_FloorMask) {
         ret = true;
     }
-    if (ip->x40_vel.x > 0.0f) {
+    if (ip->x40_vel.x > 0.0F) {
         if (cd->env_flags & Collide_LeftWallMask) {
             ret = true;
         }
@@ -152,7 +152,7 @@ bool it_2725_Logic101_Reflected(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
     ip->xDD4_itemVar.mewtwoshadowball.x4.x += M_PI;
-    while (ip->xDD4_itemVar.mewtwoshadowball.x4.x < 0.0f) {
+    while (ip->xDD4_itemVar.mewtwoshadowball.x4.x < 0.0F) {
         ip->xDD4_itemVar.mewtwoshadowball.x4.x += M_TAU;
     }
     while (ip->xDD4_itemVar.mewtwoshadowball.x4.x > M_TAU) {

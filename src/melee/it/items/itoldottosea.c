@@ -21,7 +21,7 @@ void it_802E269C(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
     it_8027CAD8(gobj);
-    it_8027C0A8(gobj, ip->facing_dir, 1.0f);
+    it_8027C0A8(gobj, ip->facing_dir, 1.0F);
     Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
 }
 
@@ -146,9 +146,9 @@ void it_802E2DF4(Item_GObj* gobj)
 void it_802E2E30(Item_GObj* gobj)
 {
     Item* ip = gobj->user_data;
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     ip->xDD4_itemVar.oldottosea.x24 = 0;
     if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
         Item_80268E5C(gobj, 7, ITEM_ANIM_UPDATE);
@@ -165,7 +165,7 @@ bool itOldottosea_UnkMotion7_Anim(Item_GObj* gobj)
         ip->xDD4_itemVar.oldottosea.x28 = 0;
         ip = gobj->user_data;
         it_8027CAD8(gobj);
-        it_8027C0A8(gobj, ip->facing_dir, 1.0f);
+        it_8027C0A8(gobj, ip->facing_dir, 1.0F);
         Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
     }
     return false;
@@ -180,9 +180,9 @@ void it_802E3098(Item_GObj* gobj)
     Item* ip = GET_ITEM(gobj);
     s32 val;
 
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = 0.0F;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
 
     if (lbLang_IsSettingJP()) {
         val = 0x37;
@@ -201,7 +201,7 @@ bool itOldottosea_UnkMotion3_Anim(Item_GObj* gobj)
     if (ip->xDD4_itemVar.oldottosea.x28 == 0) {
         int int_dir;
         ip->facing_dir = -ip->facing_dir;
-        if (-1.0f == ip->facing_dir) {
+        if (-1.0F == ip->facing_dir) {
             int_dir = -1;
         } else {
             int_dir = 1;

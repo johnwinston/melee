@@ -38,8 +38,8 @@ void it_802C875C(Item_GObj* gobj)
     itGamewatchchefAttributes* attrs =
         ip->xC4_article_data->x4_specialAttributes;
     PAD_STACK(8);
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_80275158(gobj, attrs->xC);
     Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
 }
@@ -47,9 +47,9 @@ void it_802C875C(Item_GObj* gobj)
 bool itGamewatchchef_UnkMotion1_Anim(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
-    ip->xD44_lifeTimer -= 1.0f;
-    if (ip->xD44_lifeTimer <= 0.0f) {
-        ip->xD44_lifeTimer = 0.0f;
+    ip->xD44_lifeTimer -= 1.0F;
+    if (ip->xD44_lifeTimer <= 0.0F) {
+        ip->xD44_lifeTimer = 0.0F;
         return true;
     }
     if ((s32) ip->xD44_lifeTimer & 2) {
@@ -70,8 +70,8 @@ bool it_2725_Logic112_Clanked(Item_GObj* gobj)
     itGamewatchchefAttributes* attrs =
         ip->xC4_article_data->x4_specialAttributes;
     PAD_STACK(16);
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_80275158(gobj, attrs->xC);
     Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
     return false;
@@ -83,8 +83,8 @@ bool it_2725_Logic112_HitShield(Item_GObj* gobj)
     itGamewatchchefAttributes* attrs =
         ip->xC4_article_data->x4_specialAttributes;
     PAD_STACK(16);
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_80275158(gobj, attrs->xC);
     Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
     return false;
@@ -96,11 +96,11 @@ bool it_2725_Logic112_Absorbed(Item_GObj* gobj)
     itGamewatchchefAttributes* attrs =
         ip->xC4_article_data->x4_specialAttributes;
     PAD_STACK(24);
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.y = 0.0F;
+    ip->x40_vel.x = 0.0F;
     it_80275158(gobj, attrs->xC);
     Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
-    ip->xD44_lifeTimer = 0.0f;
+    ip->xD44_lifeTimer = 0.0F;
     return false;
 }
 
