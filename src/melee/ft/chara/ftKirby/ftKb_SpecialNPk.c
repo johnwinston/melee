@@ -796,10 +796,10 @@ void ftKb_LkSpecialAirNEnd_Anim(Fighter_GObj* gobj)
             freefall = da->specialn_cl_freefall_toggle;
             break;
         }
-        if (freefall == 0.0f) {
+        if (freefall == 0.0F) {
             ftCo_Fall_Enter(gobj);
         } else {
-            ftCo_80096900(gobj, 1, 0, true, 1.0f, freefall);
+            ftCo_80096900(gobj, 1, 0, true, 1.0F, freefall);
         }
     }
 }
@@ -1132,7 +1132,7 @@ void ftKb_SsSpecialNStart_Coll(Fighter_GObj* gobj)
     if (ft_80082708(gobj) == GA_Ground) {
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_SsSpecialAirNStart,
-                                  0x0C4C5080U, fp->cur_anim_frame, 1.0f, 0.0f,
+                                  0x0C4C5080U, fp->cur_anim_frame, 1.0F, 0.0F,
                                   NULL);
         ftKirbyDmgInline(gobj);
     }
@@ -1164,7 +1164,7 @@ void ftKb_SsSpecialNCancel_Coll(Fighter_GObj* gobj)
     if (ft_80082708(gobj) == GA_Ground) {
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_SsSpecialAirN, 0x0C4C5080U,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         ftKirbyDmgInline(gobj);
     }
 }
@@ -1175,7 +1175,7 @@ void ftKb_SsSpecialN_Coll(Fighter_GObj* gobj)
     if (ft_80082708(gobj) == GA_Ground) {
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_SsSpecialAirN, 0x0C4C5080U,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         ftKirbyDmgInline(gobj);
     }
 }
@@ -1186,7 +1186,7 @@ void ftKb_SsSpecialAirNStart_Coll(Fighter_GObj* gobj)
     if (ft_80082708(gobj) == GA_Air) {
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_SsSpecialNStart, 0x0C4C5080U,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         ftKirbyDmgInline(gobj);
     }
 }
@@ -1197,7 +1197,7 @@ void ftKb_SsSpecialAirN_Coll(Fighter_GObj* gobj)
     if (ft_80082708(gobj) == GA_Air) {
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_SsSpecialN, 0x0C4C5080U,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         ftKirbyDmgInline(gobj);
     }
 }
