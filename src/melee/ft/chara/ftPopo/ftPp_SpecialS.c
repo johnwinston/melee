@@ -1266,7 +1266,7 @@ void ftPp_SpecialHi_80122898(Fighter_GObj* gobj)
         fp->fv.pp.x2230_b0 = false;
         fp->death2_cb = NULL;
         fp->take_dmg_cb = NULL;
-        ftPartSetRotX(gobj->user_data, 0, 0.0f);
+        ftPartSetRotX(gobj->user_data, 0, 0.0F);
     }
 }
 

@@ -1066,6 +1066,7 @@ struct Ground {
             struct grBigBlueRoute_GroundVars bigblueroute;
             struct grCastle_GroundVars castle;
             struct grCastle_GroundVars2 castle2;
+            struct grCastle_GroundVars3 castle3;
             struct grCorneria_GroundVars corneria;
             struct grGreatBay_GroundVars greatbay;
             struct grGreatBay_GroundVars2 greatbay2;

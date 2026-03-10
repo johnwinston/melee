@@ -2609,7 +2609,7 @@ void ftKb_LgSpecialN_Coll(Fighter_GObj* gobj)
         Fighter* fp = gobj->user_data;
         ftCommon_8007D5D4(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_LgSpecialAirN, 0x5000,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         fp->accessory4_cb = fn_800F98F4;
     }
 }
@@ -2620,7 +2620,7 @@ void ftKb_LgSpecialAirN_Coll(Fighter_GObj* gobj)
         Fighter* fp = gobj->user_data;
         ftCommon_8007D7FC(fp);
         Fighter_ChangeMotionState(gobj, ftKb_MS_LgSpecialN, 0x5000,
-                                  fp->cur_anim_frame, 1.0f, 0.0f, NULL);
+                                  fp->cur_anim_frame, 1.0F, 0.0F, NULL);
         fp->accessory4_cb = fn_800F98F4;
     }
 }
