@@ -632,6 +632,15 @@ typedef struct itPokemonAttributes {
     s32 x18;
 } itPokemonAttributes;
 
+typedef struct itKamex_ItemVars {
+    /* +00 ip+DD4 */ s16 x0;
+    /* +02 ip+DD6 */ u8 padding[0xE34 - 0xDD8];
+    /* +60 ip+E34 */ s32 timer;
+    /* +64 ip+E38 */ int x64;
+    /* +68 ip+E3C */ f32 x68;
+    /* +6C ip+E40 */ f32 x6C;
+} itKamex_ItemVars;
+
 typedef struct itKamexAttributes {
     /* +00 */ f32 x0;
     /* +04 */ s32 timer;
@@ -648,8 +657,8 @@ typedef struct {
     u8 padding[0xE34 - 0xDD8];
     s32 timer;
     int x64;
-    f32 x68;
-    f32 x6C;
+    int x68;
+    int x6C;
     union {
         f32 xE44;
         s32 xE44_s32;
