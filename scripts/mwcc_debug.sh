@@ -62,10 +62,12 @@ case "${1:-}" in
         COMPILE_CMD=$(echo "$CMD" | sed 's|wine build/tools/sjiswrap.exe |wine |' | sed 's| &&.*||')
 
         enable_debug
+        trap 'disable_debug' EXIT
         rm -f "$REPO_ROOT/pcdump.txt"
         echo "Compiling: $SOURCE_FILE"
         eval "$COMPILE_CMD" 2>&1
         disable_debug
+        trap - EXIT
 
         PCDUMP="$REPO_ROOT/pcdump.txt"
         if [ -f "$PCDUMP" ]; then
