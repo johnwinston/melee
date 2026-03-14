@@ -43,6 +43,21 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 HELPERS="$REPO_ROOT/scripts/decomp_helpers.py"
 
+# Kill stale processes from previous runs
+kill_stale_processes() {
+    local stale_found=false
+    for proc in decomp_overnight decomp_helpers ninja mwcceppc; do
+        if pgrep -f "$proc" >/dev/null 2>&1; then
+            pkill -f "$proc" 2>/dev/null || true
+            stale_found=true
+        fi
+    done
+    if [ "$stale_found" = "true" ]; then
+        sleep 1
+    fi
+}
+kill_stale_processes
+
 LOG_DIR="$REPO_ROOT/scripts/logs"
 mkdir -p "$LOG_DIR"
 
@@ -216,7 +231,6 @@ while true; do
     # 1. Ensure we're on a clean master, synced with upstream
     log "Updating master..."
     git checkout master 2>/dev/null || git checkout main 2>/dev/null
-    git pull --ff-only 2>/dev/null || true
     if git remote get-url upstream >/dev/null 2>&1; then
         log "Fetching upstream..."
         git fetch upstream 2>/dev/null || true
@@ -224,6 +238,10 @@ while true; do
             log "WARNING: upstream rebase failed, continuing with current master"
             git rebase --abort 2>/dev/null || true
         }
+        # Force-push to fork after rebase (rewrites SHAs, so ff-only won't work)
+        git push --force origin master 2>/dev/null || true
+    else
+        git pull --ff-only 2>/dev/null || true
     fi
 
     # 2. Build to make sure master is clean
