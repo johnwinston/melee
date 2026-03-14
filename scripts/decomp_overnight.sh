@@ -43,12 +43,14 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 HELPERS="$REPO_ROOT/scripts/decomp_helpers.py"
 
-# Kill stale processes from previous runs
+# Kill stale processes from previous runs (exclude self)
 kill_stale_processes() {
     local stale_found=false
     for proc in decomp_overnight decomp_helpers ninja mwcceppc; do
-        if pgrep -f "$proc" >/dev/null 2>&1; then
-            pkill -f "$proc" 2>/dev/null || true
+        local pids
+        pids=$(pgrep -f "$proc" 2>/dev/null | grep -v "^$$$" || true)
+        if [ -n "$pids" ]; then
+            echo "$pids" | xargs kill 2>/dev/null || true
             stale_found=true
         fi
     done
@@ -234,12 +236,16 @@ while true; do
     if git remote get-url upstream >/dev/null 2>&1; then
         log "Fetching upstream..."
         git fetch upstream 2>/dev/null || true
+        local pre_rebase_head
+        pre_rebase_head=$(git rev-parse HEAD)
         git rebase upstream/master 2>&1 | tee -a "$MAIN_LOG" || {
             log "WARNING: upstream rebase failed, continuing with current master"
             git rebase --abort 2>/dev/null || true
         }
-        # Force-push to fork after rebase (rewrites SHAs, so ff-only won't work)
-        git push --force origin master 2>/dev/null || true
+        # Force-push to fork only if rebase moved HEAD
+        if [ "$(git rev-parse HEAD)" != "$pre_rebase_head" ]; then
+            git push --force origin master 2>&1 | tee -a "$MAIN_LOG" || log "WARNING: force-push to fork failed"
+        fi
     else
         git pull --ff-only 2>/dev/null || true
     fi
