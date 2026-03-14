@@ -572,6 +572,7 @@ struct Item {
         itKinoko_ItemVars kinoko;
         itKirbyHammer_ItemVars kirbyhammer;
         itkireihana_ItemVars kireihana;
+        itKamex_ItemVars kamex;
         itKlap_ItemVars klap;
         itKoopaFlame_ItemVars koopaflame;
         itKusudama_ItemVars kusudama;
