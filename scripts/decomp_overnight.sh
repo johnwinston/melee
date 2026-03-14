@@ -236,7 +236,6 @@ while true; do
     if git remote get-url upstream >/dev/null 2>&1; then
         log "Fetching upstream..."
         git fetch upstream 2>/dev/null || true
-        local pre_rebase_head
         pre_rebase_head=$(git rev-parse HEAD)
         git rebase upstream/master 2>&1 | tee -a "$MAIN_LOG" || {
             log "WARNING: upstream rebase failed, continuing with current master"
