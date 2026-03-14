@@ -391,6 +391,26 @@ $func_m2c
 "
     done < <(echo "$BATCH" | python3 -c "import json,sys; [print(json.dumps(f)) for f in json.load(sys.stdin)]")
 
+    # Capture compiler IR/backend dump for the target translation unit
+    PCDUMP_CONTEXT=""
+    if [ -x "$REPO_ROOT/scripts/mwcc_debug.sh" ]; then
+        "$REPO_ROOT/scripts/mwcc_debug.sh" compile "$FUNC_FILE" >/dev/null 2>&1 || true
+        PCDUMP_FILE="$REPO_ROOT/scripts/mwcc_debug/pcdump_$(basename "$FUNC_FILE" .c).txt"
+        if [ -f "$PCDUMP_FILE" ]; then
+            # Extract only the target functions' sections from the dump
+            PCDUMP_CONTEXT=$(python3 -c "
+import sys, re
+funcs = set(sys.argv[2:])
+text = open(sys.argv[1]).read()
+sections = re.split(r'(?=^Starting function )', text, flags=re.MULTILINE)
+for sec in sections:
+    m = re.match(r'^Starting function (\S+)', sec)
+    if m and m.group(1) in funcs:
+        sys.stdout.write(sec)
+" "$PCDUMP_FILE" $ALL_FUNC_NAMES 2>/dev/null || true)
+        fi
+    fi
+
     # Build the list of all function names for the prompt
     ALL_NAMES_LIST=$(echo "$BATCH" | python3 -c "
 import json, sys
@@ -414,6 +434,13 @@ $CONTEXT_H
 
 === PER-FUNCTION ASSEMBLY AND m2c OUTPUT ===
 $FUNC_SECTIONS
+$([ -n "$PCDUMP_CONTEXT" ] && echo "=== COMPILER IR/BACKEND DUMP (from mwcc_debug pcdump) ===
+This shows the compiler's internal passes for the target functions.
+Key passes: BEFORE GLOBAL OPTIMIZATION (initial IR), AFTER REGISTER COLORING
+(physical register assignment), FINAL CODE (what gets emitted).
+Use this to understand register allocation decisions and optimization choices.
+
+$PCDUMP_CONTEXT" || true)
 
 WORKFLOW:
 
