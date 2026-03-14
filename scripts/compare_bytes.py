@@ -144,7 +144,6 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
     comp_func_relocs = func_relocs(comp_relocs, comp_offset, comp_size)
 
     # Compare instruction by instruction
-    n_insns = min(len(orig_bytes), len(comp_bytes)) // 4
     max_insns = max(len(orig_bytes), len(comp_bytes)) // 4
     mismatches = 0
     reloc_diffs = 0
