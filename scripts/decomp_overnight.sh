@@ -54,8 +54,10 @@ kill_stale_processes() {
             stale_found=true
         fi
     done
+    # Kill stale Wine servers that can interfere with builds
+    wineserver -k 2>/dev/null || true
     if [ "$stale_found" = "true" ]; then
-        sleep 1
+        sleep 2
     fi
 }
 kill_stale_processes
