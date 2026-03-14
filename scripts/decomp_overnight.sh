@@ -391,6 +391,9 @@ $func_m2c
 "
     done < <(echo "$BATCH" | python3 -c "import json,sys; [print(json.dumps(f)) for f in json.load(sys.stdin)]")
 
+    # Resolve callee signatures for all target functions
+    CALLEE_SIGS=$(python3 "$REPO_ROOT/scripts/resolve_callees.py" "$ASM_FILE" $ALL_FUNC_NAMES 2>/dev/null || echo "(callee resolution failed)")
+
     # mwcc_debug is available for debugging mismatches during iteration
 
     # Build the list of all function names for the prompt
@@ -416,6 +419,9 @@ $CONTEXT_H
 
 === PER-FUNCTION ASSEMBLY AND m2c OUTPUT ===
 $FUNC_SECTIONS
+
+=== CALLEE SIGNATURES (called functions — no need to grep for these) ===
+$CALLEE_SIGS
 
 WORKFLOW:
 
@@ -448,9 +454,10 @@ WORKFLOW:
 4. CHECK MATCH for each function (use absolute path to report.json since build/ is a symlink):
    python3 -c \"import json; [print(fn) for u in json.load(open('$REPO_ROOT/build/GALE01/report.json'))['units'] for fn in u.get('functions',[]) if fn.get('name') in {$(echo "$BATCH" | python3 -c "import json,sys; print(','.join(repr(f['name']) for f in json.load(sys.stdin)))")}]\"
 
-5. IF NOT 100%: Compare compiled vs original bytes to find exact differences.
-   Use pyelftools to extract compiled bytes from $OBJ_FILE.
-   Compare instruction-by-instruction with the original asm.
+5. IF NOT 100%: Compare compiled vs original bytes using the helper script:
+   python3 $REPO_ROOT/scripts/compare_bytes.py $OBJ_FILE FUNC_NAME
+   This shows instruction-by-instruction diff with relocation masking. Do NOT write inline
+   pyelftools scripts — always use compare_bytes.py.
    Common fixes: wrong enum value, wrong bitfield bit, missing PAD_STACK, wrong inline usage.
 
    FOR REGISTER ALLOCATION ISSUES: Run the MWCC debug tool to see compiler internals:
