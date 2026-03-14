@@ -396,6 +396,25 @@ $func_m2c
     # Resolve callee signatures for all target functions
     CALLEE_SIGS=$(python3 "$REPO_ROOT/scripts/resolve_callees.py" "$ASM_FILE" $ALL_FUNC_NAMES 2>/dev/null || echo "(callee resolution failed)")
 
+    # Resolve SDA float constants from the asm file
+    SDA_CONSTANTS=$(python3 "$HELPERS" resolve-sda-constants "$ASM_FILE" $ALL_FUNC_NAMES 2>/dev/null || echo "(no SDA constants)")
+
+    # Extract main struct definition based on module prefix
+    MODULE_PREFIX=$(echo "${FUNC_FILE#src/melee/}" | sed 's|/.*||')
+    STRUCT_NAME=""
+    case "$MODULE_PREFIX" in
+        it) STRUCT_NAME="Item" ;;
+        ft) STRUCT_NAME="Fighter" ;;
+        gr) STRUCT_NAME="Ground" ;;
+    esac
+    MAIN_STRUCT=""
+    if [ -n "$STRUCT_NAME" ]; then
+        TYPES_HEADER="src/melee/$MODULE_PREFIX/types.h"
+        if [ -f "$TYPES_HEADER" ]; then
+            MAIN_STRUCT=$(python3 "$HELPERS" extract-struct "$TYPES_HEADER" "$STRUCT_NAME" 2>/dev/null || echo "")
+        fi
+    fi
+
     # mwcc_debug is available for debugging mismatches during iteration
 
     # Build the list of all function names for the prompt
@@ -413,17 +432,21 @@ $ALL_NAMES_LIST
 FILE: $FUNC_FILE
 OBJ: $OBJ_FILE
 
+=== CALLEE SIGNATURES (called functions — no need to grep for these) ===
+$CALLEE_SIGS
+
+=== SDA CONSTANTS (float/double values used by these functions) ===
+$SDA_CONSTANTS
+
 === SOURCE FILE (trimmed context with stubs and nearby examples) ===
 $CONTEXT_C
 
 === HEADER FILE ($HEADER_FILE) ===
 $CONTEXT_H
+$([ -n "$MAIN_STRUCT" ] && printf '\n=== MAIN STRUCT (%s from %s/types.h) ===\n%s' "$STRUCT_NAME" "$MODULE_PREFIX" "$MAIN_STRUCT")
 
 === PER-FUNCTION ASSEMBLY AND m2c OUTPUT ===
 $FUNC_SECTIONS
-
-=== CALLEE SIGNATURES (called functions — no need to grep for these) ===
-$CALLEE_SIGS
 
 WORKFLOW:
 

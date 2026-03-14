@@ -18,6 +18,8 @@ Subcommands:
     progress-save <file> <func> <status>  Append to progress JSON
     progress-check <file> <func>          Check if function already tried
     parse-rate-limit <log> <backoff>      Parse rate limit reset time
+    resolve-sda-constants <asm> <func...> Resolve SDA float constants from asm
+    extract-struct <header> <name>        Extract struct definition from header
 """
 
 import json
@@ -406,6 +408,118 @@ def cmd_parse_rate_limit(log_file, backoff_str):
         print(backoff)
 
 
+def cmd_resolve_sda_constants(asm_file, *func_names):
+    """Resolve SDA float/double constants from the asm file's .sdata2/.sdata.
+
+    Parses target functions' assembly for @sda21 references, then looks up
+    their values in the .sdata2/.sdata sections of the same file.
+    """
+    try:
+        text = Path(asm_file).read_text()
+    except FileNotFoundError:
+        print("(asm file not found)")
+        return
+
+    # Extract @sda21 references from target functions
+    sda_refs = set()
+    for func_name in func_names:
+        # Extract function asm
+        pattern = (
+            rf"\.fn {re.escape(func_name)}.*?"
+            rf"\.endfn {re.escape(func_name)}"
+        )
+        m = re.search(pattern, text, re.DOTALL)
+        if not m:
+            pattern = (
+                rf"glabel {re.escape(func_name)}\b.*?"
+                rf"(?=\nglabel |\Z)"
+            )
+            m = re.search(pattern, text, re.DOTALL)
+        if m:
+            for ref in re.findall(r'(\w+)@sda21', m.group(0)):
+                sda_refs.add(ref)
+
+    if not sda_refs:
+        print("(no SDA references found)")
+        return
+
+    # Parse .sdata and .sdata2 sections for .obj/.endobj blocks
+    sda_values = {}
+    for m in re.finditer(
+        r'\.obj (\w+),.*?\n(.*?)\.endobj \1', text, re.DOTALL
+    ):
+        sym = m.group(1)
+        if sym not in sda_refs:
+            continue
+        body = m.group(2)
+
+        # Try .float
+        fm = re.search(r'\.float\s+(.+)', body)
+        if fm:
+            sda_values[sym] = f"{fm.group(1).strip()}f"
+            continue
+
+        # Try .double
+        dm = re.search(r'\.double\s+(.+)', body)
+        if dm:
+            sda_values[sym] = f"{dm.group(1).strip()} (double)"
+            continue
+
+        # Try .string
+        sm = re.search(r'\.string\s+"(.*?)"', body)
+        if sm:
+            sda_values[sym] = f'"{sm.group(1)}" (string)'
+            continue
+
+        # Try .4byte (integer constant)
+        bm = re.search(r'\.4byte\s+(0x[0-9A-Fa-f]+|\d+)', body)
+        if bm:
+            sda_values[sym] = bm.group(1)
+            continue
+
+        sda_values[sym] = "(unknown format)"
+
+    # Print in order of first appearance
+    for ref in sorted(sda_refs, key=lambda r: text.index(r)):
+        val = sda_values.get(ref, "(not found in .sdata/.sdata2)")
+        print(f"{ref} = {val}")
+
+
+def cmd_extract_struct(types_header, struct_name):
+    """Extract a struct definition from a types header file.
+
+    Finds `struct <name> {` and extracts through the closing `};`.
+    """
+    try:
+        lines = Path(types_header).read_text().splitlines()
+    except FileNotFoundError:
+        print(f"(header not found: {types_header})")
+        return
+
+    target = f"struct {struct_name} " + "{"
+    start = None
+    for i, line in enumerate(lines):
+        if target in line:
+            start = i
+            break
+
+    if start is None:
+        print(f"(struct {struct_name} not found in {types_header})")
+        return
+
+    # Find matching closing brace
+    depth = 0
+    end = start
+    for i in range(start, len(lines)):
+        depth += lines[i].count("{") - lines[i].count("}")
+        if depth <= 0 and i > start:
+            end = i
+            break
+
+    for i in range(start, end + 1):
+        print(lines[i])
+
+
 SUBCOMMANDS = {
     "ninja-progress": (cmd_ninja_progress, 0),
     "stream-monitor": (cmd_stream_monitor, 2),  # optional 3rd arg: done_flag
@@ -419,6 +533,8 @@ SUBCOMMANDS = {
     "progress-save": (cmd_progress_save, 3),
     "progress-check": (cmd_progress_check, 2),
     "parse-rate-limit": (cmd_parse_rate_limit, 2),
+    "resolve-sda-constants": (cmd_resolve_sda_constants, 1),
+    "extract-struct": (cmd_extract_struct, 2),
 }
 
 

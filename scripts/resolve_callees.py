@@ -185,13 +185,36 @@ def resolve_callees(asm_path, func_names):
     # Build index once, then look up all targets
     index = build_header_index()
 
+    header_paths = set()
+
     for name in all_targets:
         entry = index.get(name)
         if entry:
             sig, loc = entry
             print(f"{sig} \u2014 {loc}")
+            # Collect header path (strip :line suffix)
+            header_paths.add(loc.rsplit(":", 1)[0])
         else:
             print(f"{name}(...) \u2014 (declaration not found)")
+
+    # Print suggested includes
+    if header_paths:
+        includes = []
+        for hp in sorted(header_paths):
+            if hp.startswith("src/melee/"):
+                inc = hp[len("src/melee/"):]
+                includes.append(f'#include "{inc}"')
+            elif hp.startswith("src/sysdolphin/"):
+                inc = hp[len("src/sysdolphin/"):]
+                includes.append(f"#include <{inc}>")
+            elif hp.startswith("src/"):
+                inc = hp[len("src/"):]
+                includes.append(f"#include <{inc}>")
+        if includes:
+            print()
+            print("SUGGESTED INCLUDES:")
+            for inc in sorted(set(includes)):
+                print(f"  {inc}")
 
 
 def main():
