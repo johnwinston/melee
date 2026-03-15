@@ -43,6 +43,9 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 HELPERS="$REPO_ROOT/scripts/decomp_helpers.py"
 
+NINJA_TIMEOUT=${NINJA_TIMEOUT:-300}
+NINJA_MAX_RETRIES=${NINJA_MAX_RETRIES:-3}
+
 # Kill stale processes from previous runs (exclude self)
 kill_stale_processes() {
     local stale_found=false
@@ -60,6 +63,57 @@ kill_stale_processes() {
         sleep 2
     fi
 }
+# Run ninja with a watchdog that auto-kills hung wine/compiler processes.
+# Usage: run_ninja_with_watchdog [ninja args...]
+# Returns: ninja's exit code, or 1 if all retries exhausted
+run_ninja_with_watchdog() {
+    local attempt=0
+    local ninja_rc_file
+    ninja_rc_file=$(mktemp /tmp/ninja_rc.XXXXXX)
+
+    while [ $attempt -lt $NINJA_MAX_RETRIES ]; do
+        if [ $attempt -gt 0 ]; then
+            log "  Ninja hung, retry ${attempt}/${NINJA_MAX_RETRIES}..."
+            sleep 2
+        fi
+        rm -f "$ninja_rc_file"
+
+        # Subshell captures ninja's exit code to a file; pipe shows progress
+        (ninja "$@" 2>&1; echo $? > "$ninja_rc_file") \
+            | python3 -u "$HELPERS" ninja-progress &
+        local bg_pid=$!
+        track_pid $bg_pid
+
+        local waited=0
+        while kill -0 $bg_pid 2>/dev/null && [ $waited -lt $NINJA_TIMEOUT ]; do
+            sleep 5
+            waited=$((waited + 5))
+        done
+
+        if kill -0 $bg_pid 2>/dev/null; then
+            log "  Ninja timed out after ${NINJA_TIMEOUT}s, killing wine/compiler..."
+            kill $bg_pid 2>/dev/null || true
+            pkill -P $bg_pid 2>/dev/null || true
+            pkill -f mwcceppc 2>/dev/null || true
+            wineserver -k 2>/dev/null || true
+            pkill -9 -f wine-preloader 2>/dev/null || true
+            wait $bg_pid 2>/dev/null || true
+            attempt=$((attempt + 1))
+            continue
+        fi
+
+        wait $bg_pid 2>/dev/null || true
+        local ninja_exit
+        ninja_exit=$(cat "$ninja_rc_file" 2>/dev/null || echo 1)
+        rm -f "$ninja_rc_file"
+        return "$ninja_exit"
+    done
+
+    rm -f "$ninja_rc_file"
+    log "  Ninja failed after $NINJA_MAX_RETRIES retries"
+    return 1
+}
+
 kill_stale_processes
 
 LOG_DIR="$REPO_ROOT/scripts/logs"
@@ -265,12 +319,8 @@ while true; do
         if [ "$SOURCE_CHANGED" = "true" ]; then
             log "  Running configure.py..."
             python3 configure.py --wrapper wine 2>&1 >> "$MAIN_LOG"
-            log "  Running ninja..."
-            set +o pipefail
-            ninja 2>&1 | python3 -u "$HELPERS" ninja-progress
-            NINJA_EXIT=${PIPESTATUS[0]}
-            set -o pipefail
-            if [ "$NINJA_EXIT" -ne 0 ]; then
+            log "  Running ninja (timeout: ${NINJA_TIMEOUT}s)..."
+            if ! run_ninja_with_watchdog; then
                 log "ERROR: Master doesn't build clean. Aborting."; exit 1
             fi
             log "Master builds OK"
