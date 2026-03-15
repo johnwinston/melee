@@ -526,13 +526,18 @@ WORKFLOW:
    Do NOT run a bare 'ninja' — it will rebuild everything due to worktree timestamps.
    The build MUST succeed (ninja exit code 0).
 
-4. CHECK MATCH for each function (use absolute path to report.json since build/ is a symlink):
-   python3 -c \"import json; [print(fn) for u in json.load(open('$REPO_ROOT/build/GALE01/report.json'))['units'] for fn in u.get('functions',[]) if fn.get('name') in {$(echo "$BATCH" | python3 -c "import json,sys; print(','.join(repr(f['name']) for f in json.load(sys.stdin)))")}]\"
+4. CHECK MATCH for each function using verify_match.py, which checks BOTH instruction
+   bytes AND relocation targets (i.e. that bl instructions call the correct function):
+   python3 $REPO_ROOT/scripts/verify_match.py $OBJ_FILE ${OBJ_FILE/src/obj} FUNC_NAME1 FUNC_NAME2 ...
+   The OBJ_FILE is your compiled .o; the obj/ path is the expected .o from the original game.
+   A function is matched when verify_match.py prints \"OK\". Register swaps are OK.
+   A \"RELOC MISMATCH\" means you're calling the wrong function — this MUST be fixed.
 
-5. IF NOT 100%: Compare compiled vs original bytes using the helper script:
-   python3 $REPO_ROOT/scripts/compare_bytes.py $OBJ_FILE FUNC_NAME
-   This shows instruction-by-instruction diff with relocation masking. Do NOT write inline
-   pyelftools scripts — always use compare_bytes.py.
+5. IF NOT MATCHED: Read the verify_match.py output carefully.
+   - \"WRONG TARGET: bl X should be Y\" — you called the wrong function. Fix the call.
+   - \"SIZE MISMATCH\" or low match % — compare instruction-by-instruction:
+     python3 $REPO_ROOT/scripts/compare_bytes.py $OBJ_FILE FUNC_NAME
+     (Do NOT write inline pyelftools scripts — always use compare_bytes.py.)
    Common fixes: wrong enum value, wrong bitfield bit, missing PAD_STACK, wrong inline usage.
 
    FOR REGISTER ALLOCATION ISSUES: Run the MWCC debug tool to see compiler internals:
@@ -554,8 +559,13 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 8. FOR FUNCTIONS NOT AT 100%: Revert their changes:
    git checkout -- .
 
-9. OUTPUT on the very last line of your response, a summary like:
-   RESULTS: func1=SUCCESS func2=FAILURE(best=XX.X%) func3=SUCCESS"
+9. OUTPUT the following at the end of your response:
+   a. A CONTEXT line with 2-3 sentences explaining what the successfully matched functions
+      do in the context of the game (the move, mechanic, stage hazard, menu screen, etc.)
+      Write for someone who plays Melee but doesn't read PowerPC. Example:
+      CONTEXT: These implement the aerial variant of Ice Climbers' up-B (Belay). The physics callbacks track Nana's position during the tethered ascent so the rubber-band renders correctly. The throw animation checks whether Nana is still in a valid state before launching her.
+   b. A RESULTS line (must be the very last line):
+      RESULTS: func1=SUCCESS func2=FAILURE(best=XX.X%) func3=SUCCESS"
 
     check_usage
 
@@ -647,6 +657,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     # Parse result from stream JSON result event
     RESULT_LINE=$(python3 "$HELPERS" parse-result "$FUNC_STREAM_LOG" 2>/dev/null || echo "status=error")
     RESULT_STATUS=$(echo "$RESULT_LINE" | sed -n 's/^status=//p' | head -1)
+    RESULT_CONTEXT=$(echo "$RESULT_LINE" | sed -n 's/^context=//p' | head -1)
 
     if [ "$RESULT_STATUS" = "success" ]; then
         log "  ✓ SUCCESS!"
@@ -657,14 +668,23 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
             log "  Pushing branch $WT_BRANCH..."
             git push -u origin "$WT_BRANCH" 2>&1 | tail -2 | tee -a "$MAIN_LOG"
 
-            # Derive PR title from file path
-            FILE_PREFIX=$(echo "${FUNC_FILE#src/melee/}" | sed 's|/.*||')
+            # Derive PR title from source file basename
+            FILE_BASENAME=$(basename "$FUNC_FILE" .c)
             if [ "$BATCH_COUNT" -gt 1 ]; then
-                PR_TITLE="$FILE_PREFIX: decompile $BATCH_COUNT functions"
+                PR_TITLE="$FILE_BASENAME: match $BATCH_COUNT functions"
                 PR_FUNCS=$(echo "$BATCH" | python3 -c "import json,sys; print('\n'.join(f'- \`{f[\"name\"]}\` ({f[\"size\"]} bytes)' for f in json.load(sys.stdin)))")
             else
-                PR_TITLE="$FILE_PREFIX: decompile $FIRST_NAME"
-                PR_FUNCS="- Decompile \`$FIRST_NAME\` — 100% match"
+                PR_TITLE="$FILE_BASENAME: match $FIRST_NAME"
+                PR_FUNCS="- \`$FIRST_NAME\` — 100% match"
+            fi
+
+            # Build optional game context section
+            PR_CONTEXT=""
+            if [ -n "$RESULT_CONTEXT" ]; then
+                PR_CONTEXT="
+## What these functions do
+$RESULT_CONTEXT
+"
             fi
 
             log "  Creating PR..."
@@ -679,7 +699,7 @@ $PR_FUNCS
 ## Verification
 - \`main.dol: OK\` (SHA1 verified)
 - \`fuzzy_match_percent: 100.0\`
-
+${PR_CONTEXT}
 🤖 Generated with [Claude Code](https://claude.ai/claude-code)
 EOF
 )" 2>&1) || PR_URL="(PR creation failed)"

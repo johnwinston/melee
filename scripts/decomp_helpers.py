@@ -136,6 +136,11 @@ def cmd_parse_result(log_file):
         print("status=error")
         sys.exit(0)
 
+    # Extract game context summary if present
+    context_match = re.search(r"CONTEXT:\s*(.+?)(?:\n|$)", result_text)
+    if context_match:
+        print(f"context={context_match.group(1).strip()}")
+
     # Check the result text for SUCCESS/FAILURE markers
     # The result field contains the last assistant message text
     if re.search(r"\bSUCCESS\b", result_text):
