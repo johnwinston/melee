@@ -125,17 +125,20 @@ run_ninja_with_watchdog() {
             wineserver -k 2>/dev/null || true
             pkill -9 -f wine-preloader 2>/dev/null || true
             wait $bg_pid 2>/dev/null || true
+            CHILD_PIDS=()  # Clear tracked PIDs after kill
             attempt=$((attempt + 1))
             continue
         fi
 
         wait $bg_pid 2>/dev/null || true
+        CHILD_PIDS=()  # Clear tracked PIDs after ninja completes
         local ninja_exit
         ninja_exit=$(cat "$ninja_rc_file" 2>/dev/null || echo 1)
         rm -f "$ninja_rc_file" "$progress_file"
         return "$ninja_exit"
     done
 
+    CHILD_PIDS=()
     rm -f "$ninja_rc_file" "$progress_file"
     log "  Ninja failed after $NINJA_MAX_RETRIES retries"
     return 1
