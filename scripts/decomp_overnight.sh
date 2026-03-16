@@ -44,7 +44,8 @@ cd "$REPO_ROOT"
 HELPERS="$REPO_ROOT/scripts/decomp_helpers.py"
 
 NINJA_TIMEOUT=${NINJA_TIMEOUT:-300}
-NINJA_MAX_RETRIES=${NINJA_MAX_RETRIES:-3}
+NINJA_STALL_TIMEOUT=${NINJA_STALL_TIMEOUT:-15}
+NINJA_MAX_RETRIES=${NINJA_MAX_RETRIES:-10}
 
 # Kill stale processes from previous runs (exclude self)
 kill_stale_processes() {
@@ -63,35 +64,57 @@ kill_stale_processes() {
         sleep 2
     fi
 }
-# Run ninja with a watchdog that auto-kills hung wine/compiler processes.
+# Run ninja with a watchdog that detects stalls (no output progress for
+# NINJA_STALL_TIMEOUT seconds) and auto-kills hung wine/compiler processes.
+# Retries up to NINJA_MAX_RETRIES times.
 # Usage: run_ninja_with_watchdog [ninja args...]
 # Returns: ninja's exit code, or 1 if all retries exhausted
 run_ninja_with_watchdog() {
     local attempt=0
-    local ninja_rc_file
+    local ninja_rc_file progress_file
     ninja_rc_file=$(mktemp /tmp/ninja_rc.XXXXXX)
+    progress_file=$(mktemp /tmp/ninja_progress.XXXXXX)
 
     while [ $attempt -lt $NINJA_MAX_RETRIES ]; do
         if [ $attempt -gt 0 ]; then
-            log "  Ninja hung, retry ${attempt}/${NINJA_MAX_RETRIES}..."
+            log "  Ninja stalled, retry ${attempt}/${NINJA_MAX_RETRIES}..."
             sleep 2
         fi
         rm -f "$ninja_rc_file"
+        touch "$progress_file"
 
-        # Subshell captures ninja's exit code to a file; pipe shows progress
+        # Subshell captures ninja's exit code; tee updates progress_file on each line
         (ninja "$@" 2>&1; echo $? > "$ninja_rc_file") \
+            | tee >(while IFS= read -r line; do date +%s > "$progress_file"; done) \
             | python3 -u "$HELPERS" ninja-progress &
         local bg_pid=$!
         track_pid $bg_pid
 
+        # Monitor for stalls: check if progress_file was updated recently
+        local stalled=false
         local waited=0
         while kill -0 $bg_pid 2>/dev/null && [ $waited -lt $NINJA_TIMEOUT ]; do
-            sleep 5
-            waited=$((waited + 5))
+            sleep 1
+            waited=$((waited + 1))
+            # Check time since last progress
+            local last_update now elapsed
+            last_update=$(cat "$progress_file" 2>/dev/null || echo 0)
+            now=$(date +%s)
+            if [ "$last_update" -gt 0 ] 2>/dev/null; then
+                elapsed=$((now - last_update))
+                if [ "$elapsed" -ge "$NINJA_STALL_TIMEOUT" ]; then
+                    stalled=true
+                    break
+                fi
+            fi
         done
 
-        if kill -0 $bg_pid 2>/dev/null; then
-            log "  Ninja timed out after ${NINJA_TIMEOUT}s, killing wine/compiler..."
+        if [ "$stalled" = "true" ] || { kill -0 $bg_pid 2>/dev/null && [ $waited -ge $NINJA_TIMEOUT ]; }; then
+            if [ "$stalled" = "true" ]; then
+                log "  Ninja stalled (no progress for ${NINJA_STALL_TIMEOUT}s), killing..."
+            else
+                log "  Ninja timed out after ${NINJA_TIMEOUT}s, killing..."
+            fi
             kill $bg_pid 2>/dev/null || true
             pkill -P $bg_pid 2>/dev/null || true
             pkill -f mwcceppc 2>/dev/null || true
@@ -105,11 +128,11 @@ run_ninja_with_watchdog() {
         wait $bg_pid 2>/dev/null || true
         local ninja_exit
         ninja_exit=$(cat "$ninja_rc_file" 2>/dev/null || echo 1)
-        rm -f "$ninja_rc_file"
+        rm -f "$ninja_rc_file" "$progress_file"
         return "$ninja_exit"
     done
 
-    rm -f "$ninja_rc_file"
+    rm -f "$ninja_rc_file" "$progress_file"
     log "  Ninja failed after $NINJA_MAX_RETRIES retries"
     return 1
 }
