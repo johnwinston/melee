@@ -663,10 +663,13 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
    git checkout -- .
 
 9. OUTPUT the following at the end of your response:
-   a. A CONTEXT line with 2-3 sentences explaining what the successfully matched functions
-      do in the context of the game (the move, mechanic, stage hazard, menu screen, etc.)
-      Write for someone who plays Melee but doesn't read PowerPC. Example:
-      CONTEXT: These implement the aerial variant of Ice Climbers' up-B (Belay). The physics callbacks track Nana's position during the tethered ascent so the rubber-band renders correctly. The throw animation checks whether Nana is still in a valid state before launching her.
+   a. A CONTEXT line with 1-2 sentences describing what these functions do IN THE GAME.
+      Describe the player-visible behavior — the move, the stage hazard, the menu interaction.
+      Do NOT describe the C code, structs, registers, compiler tricks, or decompilation process.
+      Write for a Melee player, not a programmer. Examples:
+      CONTEXT: Kirby's Final Cutter — transitions from the rising slash to the downward plunge.
+      CONTEXT: Goomba enemy on Mushroom Kingdom — initializes patrol direction when spawning.
+      CONTEXT: Onett stage — plays collision sound effects when cars hit the road barriers.
    b. A RESULTS line (must be the very last line):
       RESULTS: func1=SUCCESS func2=FAILURE(best=XX.X%) func3=SUCCESS"
 
