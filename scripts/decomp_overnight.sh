@@ -148,9 +148,9 @@ MAIN_LOG="$LOG_DIR/overnight_$TIMESTAMP.log"
 REPO="doldecomp/melee"
 MODEL=${MODEL:-opus}
 # Set to "all" to scan all files with stubs, or pass files as args
-SCAN_MODE=${SCAN_MODE:-default}
-CONTINUOUS=${CONTINUOUS:-false}
-CUTOFF_HOUR=${CUTOFF_HOUR:-8}
+SCAN_MODE=${SCAN_MODE:-all}
+CONTINUOUS=${CONTINUOUS:-true}
+CUTOFF_HOUR=${CUTOFF_HOUR:-0}
 AUTO_PUSH=${AUTO_PUSH:-false}
 BATCH_SIZE=${BATCH_SIZE:-5}
 PROGRESS_FILE="$LOG_DIR/progress_$(date +%Y%m%d).json"
