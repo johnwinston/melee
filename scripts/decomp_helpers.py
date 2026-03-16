@@ -525,6 +525,77 @@ def cmd_extract_struct(types_header, struct_name):
         print(lines[i])
 
 
+def cmd_draft_pr_body(status_file):
+    """Generate the draft PR body from a JSON status file.
+
+    The status file is a JSON array of entries:
+        {"name": "func", "file": "src/...", "status": "pending|matched|failed",
+         "detail": "100%", "context": "..."}
+
+    Outputs the markdown body to stdout.
+    """
+    try:
+        entries = json.load(open(status_file))
+    except (FileNotFoundError, json.JSONDecodeError):
+        entries = []
+
+    matched = [e for e in entries if e["status"] == "matched"]
+    failed = [e for e in entries if e["status"] == "failed"]
+    pending = [e for e in entries if e["status"] == "pending"]
+
+    lines = []
+    lines.append("## Progress")
+    lines.append("")
+    lines.append(f"**{len(matched)}** matched, **{len(failed)}** failed"
+                 + (f", **{len(pending)}** in progress" if pending else ""))
+    lines.append("")
+
+    if pending:
+        lines.append("### In progress")
+        lines.append("| File | Function | Status |")
+        lines.append("|------|----------|--------|")
+        for e in pending:
+            basename = os.path.basename(e.get("file", "?"))
+            lines.append(f"| `{basename}` | `{e['name']}` | ⏳ pending |")
+        lines.append("")
+
+    if matched:
+        lines.append("### Matched")
+        lines.append("| File | Function | Status |")
+        lines.append("|------|----------|--------|")
+        for e in matched:
+            basename = os.path.basename(e.get("file", "?"))
+            detail = e.get("detail", "100%")
+            lines.append(f"| `{basename}` | `{e['name']}` | ✓ {detail} |")
+        lines.append("")
+
+    if failed:
+        lines.append("### Failed")
+        for e in failed:
+            detail = e.get("detail", "?")
+            lines.append(f"- `{e['name']}` — {detail}")
+        lines.append("")
+
+    # Collect game context summaries
+    contexts = {}
+    for e in matched:
+        ctx = e.get("context", "")
+        if ctx:
+            basename = os.path.basename(e.get("file", "?"))
+            contexts.setdefault(basename, []).append(ctx)
+    if contexts:
+        lines.append("## What these functions do")
+        for basename, ctxs in contexts.items():
+            # Deduplicate (batches share a context line)
+            for ctx in dict.fromkeys(ctxs):
+                lines.append(f"**{basename}** — {ctx}")
+                lines.append("")
+
+    lines.append("---")
+    lines.append("🤖 Generated with [Claude Code](https://claude.ai/claude-code)")
+    print("\n".join(lines))
+
+
 SUBCOMMANDS = {
     "ninja-progress": (cmd_ninja_progress, 0),
     "stream-monitor": (cmd_stream_monitor, 2),  # optional 3rd arg: done_flag
@@ -540,6 +611,7 @@ SUBCOMMANDS = {
     "parse-rate-limit": (cmd_parse_rate_limit, 2),
     "resolve-sda-constants": (cmd_resolve_sda_constants, 1),
     "extract-struct": (cmd_extract_struct, 2),
+    "draft-pr-body": (cmd_draft_pr_body, 1),
 }
 
 
