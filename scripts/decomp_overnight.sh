@@ -690,7 +690,6 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
             --model "$MODEL" \
             --permission-mode bypassPermissions \
-            --settings '{"disableAllHooks": true}' \
             --verbose --output-format stream-json \
             -w "$BRANCH_NAME" \
             "$PROMPT" > "$FUNC_STREAM_LOG" 2>&1 &
