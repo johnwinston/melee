@@ -315,8 +315,15 @@ DRAFT_STATUS_FILE="$LOG_DIR/draft_status_$(date +%Y%m%d).json"
 DRAFT_PR_NUMBER=""
 DRAFT_BRANCH="decomp-overnight-$(date +%Y%m%d)"
 
-# Initialize empty status file
+# Initialize empty status file, and clear stale "pending" entries from crashed runs
 [ -f "$DRAFT_STATUS_FILE" ] || echo '[]' > "$DRAFT_STATUS_FILE"
+python3 -c "
+import json, sys
+f = sys.argv[1]
+entries = json.load(open(f))
+entries = [e for e in entries if e.get('status') != 'pending']
+json.dump(entries, open(f, 'w'), indent=2)
+" "$DRAFT_STATUS_FILE" 2>/dev/null || true
 
 draft_pr_set_status() {
     # Usage: draft_pr_set_status <func_name> <file> <status> [detail] [context]
