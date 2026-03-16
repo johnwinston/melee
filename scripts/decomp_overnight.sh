@@ -603,7 +603,7 @@ $CONTEXT_C
 
 === HEADER FILE ($HEADER_FILE) ===
 $CONTEXT_H
-$([ -n "$MAIN_STRUCT" ] && printf '\n=== MAIN STRUCT (%s from %s/types.h) ===\n%s' "$STRUCT_NAME" "$MODULE_PREFIX" "$MAIN_STRUCT")
+$([ -n "$MAIN_STRUCT" ] && printf '\n=== MAIN STRUCT (%s from %s/types.h) ===\n%s' "$STRUCT_NAME" "$MODULE_PREFIX" "$MAIN_STRUCT" || true)
 
 === PER-FUNCTION ASSEMBLY AND m2c OUTPUT ===
 $FUNC_SECTIONS
