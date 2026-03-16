@@ -280,6 +280,75 @@ fi
 TOTAL_SUCCESSES=0
 TOTAL_FAILURES=0
 
+# Draft PR for live progress tracking
+DRAFT_STATUS_FILE="$LOG_DIR/draft_status_$(date +%Y%m%d).json"
+DRAFT_PR_NUMBER=""
+DRAFT_BRANCH="decomp-overnight-$(date +%Y%m%d)"
+
+# Initialize empty status file
+[ -f "$DRAFT_STATUS_FILE" ] || echo '[]' > "$DRAFT_STATUS_FILE"
+
+draft_pr_set_status() {
+    # Usage: draft_pr_set_status <func_name> <file> <status> [detail] [context]
+    python3 -c "
+import json, sys
+f = sys.argv[1]; name = sys.argv[2]; file = sys.argv[3]
+status = sys.argv[4]; detail = sys.argv[5] if len(sys.argv) > 5 else ''
+context = sys.argv[6] if len(sys.argv) > 6 else ''
+entries = json.load(open(f))
+# Update existing or append
+found = False
+for e in entries:
+    if e['name'] == name:
+        e['status'] = status
+        if detail: e['detail'] = detail
+        if context: e['context'] = context
+        found = True
+        break
+if not found:
+    entries.append({'name': name, 'file': file, 'status': status,
+                    'detail': detail, 'context': context})
+json.dump(entries, open(f, 'w'), indent=2)
+" "$DRAFT_STATUS_FILE" "$1" "$2" "$3" "${4:-}" "${5:-}"
+}
+
+draft_pr_update() {
+    [ -z "$DRAFT_PR_NUMBER" ] && return
+    local body
+    body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null) || return
+    gh api "repos/$REPO/pulls/$DRAFT_PR_NUMBER" -X PATCH \
+        -f body="$body" >/dev/null 2>&1 || log "  (draft PR update failed)"
+}
+
+setup_draft_pr() {
+    # Create a lightweight branch with an empty commit for the draft PR
+    if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -q "$DRAFT_BRANCH"; then
+        # Branch exists — find existing draft PR
+        DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open --head "$DRAFT_BRANCH" \
+            --json number --jq '.[0].number' 2>/dev/null || echo "")
+        if [ -n "$DRAFT_PR_NUMBER" ]; then
+            log "Resuming draft PR #$DRAFT_PR_NUMBER"
+            return
+        fi
+    fi
+    # Create branch and push
+    git branch -f "$DRAFT_BRANCH" upstream/master 2>/dev/null
+    git push -u origin "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not push draft branch"; return; }
+    # Create draft PR
+    local body
+    body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null || echo "## Progress\n(starting...)")
+    DRAFT_PR_NUMBER=$(gh pr create --repo "$REPO" --head "$DRAFT_BRANCH" --draft \
+        --title "Overnight decomp run — $(date +%Y-%m-%d)" \
+        --body "$body" 2>/dev/null | grep -oE '[0-9]+$' || echo "")
+    if [ -n "$DRAFT_PR_NUMBER" ]; then
+        log "Created draft PR #$DRAFT_PR_NUMBER"
+    else
+        log "WARNING: could not create draft PR"
+    fi
+}
+
+setup_draft_pr
+
 while true; do
     if past_cutoff; then
         log "Past cutoff time, stopping."
@@ -405,6 +474,12 @@ print(json.dumps(targets))
     echo "$BATCH_NAMES" | while read -r bname bsize; do
         log "  $bname (${bsize} bytes)"
     done
+
+    # Mark functions as pending in draft PR
+    while IFS= read -r pname; do
+        draft_pr_set_status "$pname" "$FUNC_FILE" "pending"
+    done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+    draft_pr_update
 
     # Check if branch already exists (local or remote)
     if git rev-parse --verify "$BRANCH_NAME" >/dev/null 2>&1 || \
@@ -651,6 +726,11 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     if [ "$RATE_LIMITED" = "true" ]; then
         log "  Skipped (rate limited), will retry next run"
         TOTAL_FAILURES=$((TOTAL_FAILURES + 1))
+        # Remove pending entries for this batch
+        while IFS= read -r fname; do
+            draft_pr_set_status "$fname" "$FUNC_FILE" "failed" "rate limited"
+        done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+        draft_pr_update
         continue
     fi
 
@@ -713,7 +793,9 @@ EOF
         echo "$BATCH" | python3 -c "import json,sys; [None for f in json.load(sys.stdin)]" 2>/dev/null  # validate
         while IFS= read -r fname; do
             progress_save "$fname" "success"
+            draft_pr_set_status "$fname" "$FUNC_FILE" "matched" "100%" "$RESULT_CONTEXT"
         done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+        draft_pr_update
     else
         BEST=$(echo "$RESULT_LINE" | sed -n 's/.*best=//p' || echo "?")
         log "  ✗ FAILED (best: ${BEST}%)"
@@ -723,7 +805,9 @@ EOF
         TOTAL_FAILURES=$((TOTAL_FAILURES + BATCH_COUNT))
         while IFS= read -r fname; do
             progress_save "$fname" "failure"
+            draft_pr_set_status "$fname" "$FUNC_FILE" "failed" "best ${BEST}%"
         done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+        draft_pr_update
     fi
 
     log "  Log: $FUNC_LOG"
@@ -741,3 +825,8 @@ log "━━━━━━━━━━━━━━━━━━━━━"
 log "TOTAL RESULTS: $TOTAL_SUCCESSES succeeded, $TOTAL_FAILURES failed"
 log "Progress file: $PROGRESS_FILE"
 log "Log dir: $LOG_DIR"
+if [ -n "$DRAFT_PR_NUMBER" ]; then
+    # Final update with all results
+    draft_pr_update
+    log "Draft PR: https://github.com/$REPO/pull/$DRAFT_PR_NUMBER"
+fi
