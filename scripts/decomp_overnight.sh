@@ -354,8 +354,11 @@ setup_draft_pr() {
             return
         fi
     fi
-    # Create branch and push
+    # Create branch with an empty commit (GitHub requires a diff to create a PR)
     git branch -f "$DRAFT_BRANCH" upstream/master 2>/dev/null
+    git checkout "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not checkout draft branch"; return; }
+    git commit --allow-empty -m "Overnight decomp run — $(date +%Y-%m-%d)" 2>/dev/null
+    git checkout master 2>/dev/null
     git push -u origin "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not push draft branch"; return; }
     # Create draft PR
     local body
