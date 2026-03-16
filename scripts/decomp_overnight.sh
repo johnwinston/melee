@@ -43,7 +43,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 HELPERS="$REPO_ROOT/scripts/decomp_helpers.py"
 
-NINJA_TIMEOUT=${NINJA_TIMEOUT:-300}
+NINJA_TIMEOUT=${NINJA_TIMEOUT:-15}
 NINJA_MAX_RETRIES=${NINJA_MAX_RETRIES:-3}
 
 # Kill stale processes from previous runs (exclude self)
