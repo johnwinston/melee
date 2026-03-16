@@ -83,29 +83,33 @@ run_ninja_with_watchdog() {
         rm -f "$ninja_rc_file"
         touch "$progress_file"
 
-        # Subshell captures ninja's exit code; tee updates progress_file on each line
+        # Subshell captures ninja's exit code; pipe shows progress
         (ninja "$@" 2>&1; echo $? > "$ninja_rc_file") \
-            | tee >(while IFS= read -r line; do date +%s > "$progress_file"; done) \
             | python3 -u "$HELPERS" ninja-progress &
         local bg_pid=$!
         track_pid $bg_pid
 
-        # Monitor for stalls: check if progress_file was updated recently
+        # Monitor for stalls using the .o file modification times
         local stalled=false
         local waited=0
+        local last_mtime
+        last_mtime=$(date +%s)
         while kill -0 $bg_pid 2>/dev/null && [ $waited -lt $NINJA_TIMEOUT ]; do
             sleep 1
             waited=$((waited + 1))
-            # Check time since last progress
-            local last_update now elapsed
-            last_update=$(cat "$progress_file" 2>/dev/null || echo 0)
+            # Check if any .o file was modified recently
+            local newest
+            newest=$(find build/GALE01 -name '*.o' -newer "$progress_file" -print -quit 2>/dev/null || true)
+            if [ -n "$newest" ]; then
+                touch "$progress_file"
+                last_mtime=$(date +%s)
+            fi
+            local now elapsed
             now=$(date +%s)
-            if [ "$last_update" -gt 0 ] 2>/dev/null; then
-                elapsed=$((now - last_update))
-                if [ "$elapsed" -ge "$NINJA_STALL_TIMEOUT" ]; then
-                    stalled=true
-                    break
-                fi
+            elapsed=$((now - last_mtime))
+            if [ "$elapsed" -ge "$NINJA_STALL_TIMEOUT" ] && [ "$waited" -gt 5 ]; then
+                stalled=true
+                break
             fi
         done
 
