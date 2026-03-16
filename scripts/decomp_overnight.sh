@@ -363,7 +363,9 @@ setup_draft_pr() {
     # Create draft PR
     local body
     body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null || echo "## Progress\n(starting...)")
-    DRAFT_PR_NUMBER=$(gh pr create --repo "$REPO" --head "$DRAFT_BRANCH" --draft \
+    local fork_owner
+    fork_owner=$(gh api user --jq '.login' 2>/dev/null || git remote get-url origin | sed 's|.*[:/]\([^/]*\)/.*|\1|')
+    DRAFT_PR_NUMBER=$(gh pr create --repo "$REPO" --head "$fork_owner:$DRAFT_BRANCH" --draft \
         --title "Overnight decomp run — $(date +%Y-%m-%d)" \
         --body "$body" 2>/dev/null | grep -oE '[0-9]+$' || echo "")
     if [ -n "$DRAFT_PR_NUMBER" ]; then
