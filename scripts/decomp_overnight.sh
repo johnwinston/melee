@@ -71,9 +71,9 @@ kill_stale_processes() {
 # Returns: ninja's exit code, or 1 if all retries exhausted
 run_ninja_with_watchdog() {
     local attempt=0
-    local ninja_rc_file progress_file
+    local ninja_rc_file stall_marker
     ninja_rc_file=$(mktemp /tmp/ninja_rc.XXXXXX)
-    progress_file=$(mktemp /tmp/ninja_progress.XXXXXX)
+    stall_marker=$(mktemp /tmp/ninja_progress.XXXXXX)
 
     while [ $attempt -lt $NINJA_MAX_RETRIES ]; do
         if [ $attempt -gt 0 ]; then
@@ -81,7 +81,7 @@ run_ninja_with_watchdog() {
             sleep 2
         fi
         rm -f "$ninja_rc_file"
-        touch "$progress_file"
+        touch "$stall_marker"
 
         # Subshell captures ninja's exit code; pipe shows progress
         (ninja "$@" 2>&1; echo $? > "$ninja_rc_file") \
@@ -99,9 +99,9 @@ run_ninja_with_watchdog() {
             waited=$((waited + 1))
             # Check if any .o file was modified recently
             local newest
-            newest=$(find build/GALE01 -name '*.o' -newer "$progress_file" -print -quit 2>/dev/null || true)
+            newest=$(find build/GALE01 -name '*.o' -newer "$stall_marker" -print -quit 2>/dev/null || true)
             if [ -n "$newest" ]; then
-                touch "$progress_file"
+                touch "$stall_marker"
                 last_mtime=$(date +%s)
             fi
             local now elapsed
@@ -134,12 +134,12 @@ run_ninja_with_watchdog() {
         CHILD_PIDS=()  # Clear tracked PIDs after ninja completes
         local ninja_exit
         ninja_exit=$(cat "$ninja_rc_file" 2>/dev/null || echo 1)
-        rm -f "$ninja_rc_file" "$progress_file"
+        rm -f "$ninja_rc_file" "$stall_marker"
         return "$ninja_exit"
     done
 
     CHILD_PIDS=()
-    rm -f "$ninja_rc_file" "$progress_file"
+    rm -f "$ninja_rc_file" "$stall_marker"
     log "  Ninja failed after $NINJA_MAX_RETRIES retries"
     return 1
 }
@@ -320,26 +320,7 @@ DRAFT_BRANCH="decomp-overnight-$(date +%Y%m%d)"
 
 draft_pr_set_status() {
     # Usage: draft_pr_set_status <func_name> <file> <status> [detail] [context]
-    python3 -c "
-import json, sys
-f = sys.argv[1]; name = sys.argv[2]; file = sys.argv[3]
-status = sys.argv[4]; detail = sys.argv[5] if len(sys.argv) > 5 else ''
-context = sys.argv[6] if len(sys.argv) > 6 else ''
-entries = json.load(open(f))
-# Update existing or append
-found = False
-for e in entries:
-    if e['name'] == name:
-        e['status'] = status
-        if detail: e['detail'] = detail
-        if context: e['context'] = context
-        found = True
-        break
-if not found:
-    entries.append({'name': name, 'file': file, 'status': status,
-                    'detail': detail, 'context': context})
-json.dump(entries, open(f, 'w'), indent=2)
-" "$DRAFT_STATUS_FILE" "$1" "$2" "$3" "${4:-}" "${5:-}"
+    python3 "$HELPERS" draft-pr-set-status "$DRAFT_STATUS_FILE" "$1" "$2" "$3" "${4:-}" "${5:-}"
 }
 
 draft_pr_update() {
@@ -828,7 +809,6 @@ EOF
         # Clean up worktree (branch with commit persists)
         cleanup_worktree "$BRANCH_NAME"
         TOTAL_SUCCESSES=$((TOTAL_SUCCESSES + BATCH_COUNT))
-        echo "$BATCH" | python3 -c "import json,sys; [None for f in json.load(sys.stdin)]" 2>/dev/null  # validate
         while IFS= read -r fname; do
             progress_save "$fname" "success"
             draft_pr_set_status "$fname" "$FUNC_FILE" "matched" "100%" "$RESULT_CONTEXT"

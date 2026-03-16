@@ -525,6 +525,38 @@ def cmd_extract_struct(types_header, struct_name):
         print(lines[i])
 
 
+def cmd_draft_pr_set_status(status_file, *args):
+    """Update function status in the draft PR status file.
+
+    Usage: draft-pr-set-status <file> <name> <src_file> <status> [detail] [context]
+    """
+    name = args[0]
+    src_file = args[1]
+    status = args[2]
+    detail = args[3] if len(args) > 3 else ""
+    context = args[4] if len(args) > 4 else ""
+    try:
+        entries = json.load(open(status_file))
+    except (FileNotFoundError, json.JSONDecodeError):
+        entries = []
+    found = False
+    for e in entries:
+        if e["name"] == name:
+            e["status"] = status
+            if detail:
+                e["detail"] = detail
+            if context:
+                e["context"] = context
+            found = True
+            break
+    if not found:
+        entries.append({
+            "name": name, "file": src_file, "status": status,
+            "detail": detail, "context": context,
+        })
+    json.dump(entries, open(status_file, "w"), indent=2)
+
+
 def cmd_draft_pr_body(status_file):
     """Generate the draft PR body from a JSON status file.
 
@@ -612,6 +644,7 @@ SUBCOMMANDS = {
     "resolve-sda-constants": (cmd_resolve_sda_constants, 1),
     "extract-struct": (cmd_extract_struct, 2),
     "draft-pr-body": (cmd_draft_pr_body, 1),
+    "draft-pr-set-status": (cmd_draft_pr_set_status, 3),
 }
 
 
