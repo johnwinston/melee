@@ -254,7 +254,7 @@ progress_already_tried() {
 cleanup_worktree() {
     local branch_name="$1"
     local wt_path
-    wt_path=$(git worktree list --porcelain 2>/dev/null | grep -F "$branch_name" | head -1 | sed 's/worktree //')
+    wt_path=$(git worktree list --porcelain 2>/dev/null | grep -F "$branch_name" | head -1 | sed 's/worktree //' || true)
     if [ -n "$wt_path" ] && [ -d "$wt_path" ]; then
         git worktree remove "$wt_path" --force 2>/dev/null || true
     fi
@@ -418,8 +418,10 @@ recover_interrupted_work() {
     local branches
     branches=$(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//' || true)
     if [ -z "$branches" ]; then
+        log "  No leftover branches found."
         return 0
     fi
+    log "  Found branches: $(echo "$branches" | tr '\n' ' ')"
     while IFS= read -r branch; do
         [ -z "$branch" ] && continue
         # Only care about branches with src/ commits ahead of upstream
