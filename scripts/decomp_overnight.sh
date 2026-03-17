@@ -797,8 +797,10 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         track_pid $MONITOR_PID
 
         # Wait for claude, but kill it if result event arrives and it keeps running
+        GOT_RESULT=false
         while kill -0 $CLAUDE_PID 2>/dev/null; do
             if [ -f "$DONE_FLAG" ]; then
+                GOT_RESULT=true
                 log "  Result received, giving Claude 10s to finish..."
                 sleep 10
                 if kill -0 $CLAUDE_PID 2>/dev/null; then
@@ -816,6 +818,13 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         rm -f "$DONE_FLAG"
         set -e
         log "  Claude session exited (code: $CLAUDE_EXIT)"
+
+        # Skip rate limit check if we already got a result event — a 529 mid-session
+        # shouldn't trigger a retry when the session actually completed successfully
+        if [ "$GOT_RESULT" = "true" ]; then
+            log "  (result event received, skipping rate limit check)"
+            break
+        fi
 
         # Check for rate limit in output (exclude normal status:"allowed" events)
         if grep -v '"status":"allowed"' "$FUNC_STREAM_LOG" 2>/dev/null | grep -qi "hit your limit\|rate.limit\|resets [0-9]"; then
