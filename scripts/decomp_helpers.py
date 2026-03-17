@@ -26,6 +26,7 @@ import json
 import os
 import re
 import signal
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
@@ -113,13 +114,14 @@ def cmd_parse_result(log_file):
     """
     result_event = None
     try:
-        for line in open(log_file):
-            try:
-                d = json.loads(line)
-                if d.get("type") == "result":
-                    result_event = d
-            except (json.JSONDecodeError, KeyError):
-                pass
+        with open(log_file) as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                    if d.get("type") == "result":
+                        result_event = d
+                except (json.JSONDecodeError, KeyError):
+                    pass
     except FileNotFoundError:
         print("status=error")
         sys.exit(1)
@@ -163,17 +165,18 @@ def cmd_token_usage(log_file):
     """Sum token usage across all assistant messages in stream JSON."""
     input_t = output_t = cache_create = cache_read = 0
     try:
-        for line in open(log_file):
-            try:
-                d = json.loads(line)
-                if d.get("type") == "assistant":
-                    u = d.get("message", {}).get("usage", {})
-                    input_t += u.get("input_tokens", 0)
-                    output_t += u.get("output_tokens", 0)
-                    cache_create += u.get("cache_creation_input_tokens", 0)
-                    cache_read += u.get("cache_read_input_tokens", 0)
-            except (json.JSONDecodeError, KeyError):
-                pass
+        with open(log_file) as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                    if d.get("type") == "assistant":
+                        u = d.get("message", {}).get("usage", {})
+                        input_t += u.get("input_tokens", 0)
+                        output_t += u.get("output_tokens", 0)
+                        cache_create += u.get("cache_creation_input_tokens", 0)
+                        cache_read += u.get("cache_read_input_tokens", 0)
+                except (json.JSONDecodeError, KeyError):
+                    pass
     except FileNotFoundError:
         print("tokens=unknown")
         return
@@ -192,8 +195,8 @@ def cmd_token_usage(log_file):
 def cmd_extract_log(stream_log, output_log):
     """Extract readable log from stream JSON."""
     try:
-        with open(output_log, "w") as out:
-            for line in open(stream_log):
+        with open(stream_log) as inp, open(output_log, "w") as out:
+            for line in inp:
                 try:
                     d = json.loads(line)
                     if d.get("type") == "assistant":
@@ -399,6 +402,9 @@ def cmd_parse_rate_limit(log_file, backoff_str):
     m = re.search(r"resets (\d+)(am|pm)", text, re.I)
     if m:
         hour = int(m.group(1))
+        if hour < 1 or hour > 12:
+            print(backoff)
+            return
         if m.group(2).lower() == "pm" and hour != 12:
             hour += 12
         elif m.group(2).lower() == "am" and hour == 12:
@@ -525,6 +531,69 @@ def cmd_extract_struct(types_header, struct_name):
         print(lines[i])
 
 
+def cmd_draft_pr_clear_pending(status_file):
+    """Clear stale 'pending' entries from the draft PR status file."""
+    try:
+        with open(status_file) as f:
+            entries = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return
+    entries = [e for e in entries if e.get("status") != "pending"]
+    with open(status_file, "w") as f:
+        json.dump(entries, f, indent=2)
+
+
+def cmd_github_exclusions(repo):
+    """Print JSON list of function names mentioned in open PRs/issues."""
+    names = set()
+    try:
+        prs = json.loads(
+            subprocess.run(
+                [
+                    "gh", "pr", "list", "--repo", repo, "--state", "open",
+                    "--limit", "100", "--json", "title,body,number",
+                ],
+                capture_output=True, text=True,
+            ).stdout or "[]"
+        )
+        issues = json.loads(
+            subprocess.run(
+                [
+                    "gh", "issue", "list", "--repo", repo, "--state", "open",
+                    "--limit", "100", "--json", "title,body",
+                ],
+                capture_output=True, text=True,
+            ).stdout or "[]"
+        )
+    except Exception:
+        prs, issues = [], []
+    for item in prs + issues:
+        text = (item.get("title", "") + " " + item.get("body", "")).lower()
+        for m in re.finditer(
+            r"\b(fn_[0-9a-f]{6,}|ft[A-Z]\w*_\w+|gr\w+_\w+|it_\w+|gm\w+_\w+)\b",
+            text, re.I,
+        ):
+            names.add(m.group(1).lower())
+    # Scan PR diffs for stub removals (lines like '- /// #funcName')
+    for pr in prs:
+        num = pr.get("number")
+        if not num:
+            continue
+        try:
+            diff = subprocess.run(
+                [
+                    "gh", "api", f"repos/{repo}/pulls/{num}/files",
+                    "--jq", ".[].patch // empty",
+                ],
+                capture_output=True, text=True, timeout=10,
+            ).stdout or ""
+            for m in re.finditer(r"^-.*/// #(\w+)", diff, re.MULTILINE):
+                names.add(m.group(1).lower())
+        except Exception:
+            pass
+    print(json.dumps(list(names)))
+
+
 def cmd_draft_pr_set_status(status_file, *args):
     """Update function status in the draft PR status file.
 
@@ -536,7 +605,8 @@ def cmd_draft_pr_set_status(status_file, *args):
     detail = args[3] if len(args) > 3 else ""
     context = args[4] if len(args) > 4 else ""
     try:
-        entries = json.load(open(status_file))
+        with open(status_file) as f:
+            entries = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         entries = []
     found = False
@@ -554,7 +624,8 @@ def cmd_draft_pr_set_status(status_file, *args):
             "name": name, "file": src_file, "status": status,
             "detail": detail, "context": context,
         })
-    json.dump(entries, open(status_file, "w"), indent=2)
+    with open(status_file, "w") as f:
+        json.dump(entries, f, indent=2)
 
 
 def cmd_draft_pr_body(status_file):
@@ -567,7 +638,8 @@ def cmd_draft_pr_body(status_file):
     Outputs the markdown body to stdout.
     """
     try:
-        entries = json.load(open(status_file))
+        with open(status_file) as f:
+            entries = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         entries = []
 
@@ -645,6 +717,8 @@ SUBCOMMANDS = {
     "extract-struct": (cmd_extract_struct, 2),
     "draft-pr-body": (cmd_draft_pr_body, 1),
     "draft-pr-set-status": (cmd_draft_pr_set_status, 3),
+    "draft-pr-clear-pending": (cmd_draft_pr_clear_pending, 1),
+    "github-exclusions": (cmd_github_exclusions, 1),
 }
 
 

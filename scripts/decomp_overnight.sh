@@ -30,12 +30,13 @@ kill_children() {
     CHILD_PIDS=()
 }
 cleanup() {
+    local rc=$?
     trap - INT TERM EXIT
     kill_children
     pkill -P $$ 2>/dev/null || true
     # Wait for killed children to actually exit
     wait 2>/dev/null || true
-    exit 1
+    exit $rc
 }
 trap cleanup INT TERM EXIT
 
@@ -50,9 +51,10 @@ NINJA_MAX_RETRIES=${NINJA_MAX_RETRIES:-10}
 # Kill stale processes from previous runs (exclude self)
 kill_stale_processes() {
     local stale_found=false
+    local self_pid=$$
     for proc in decomp_overnight decomp_helpers ninja mwcceppc; do
         local pids
-        pids=$(pgrep -f "$proc" 2>/dev/null | grep -v "^$$$" || true)
+        pids=$(pgrep -f "$proc" 2>/dev/null | grep -v "^${self_pid}$" || true)
         if [ -n "$pids" ]; then
             echo "$pids" | xargs kill 2>/dev/null || true
             stale_found=true
@@ -252,7 +254,7 @@ progress_already_tried() {
 cleanup_worktree() {
     local branch_name="$1"
     local wt_path
-    wt_path=$(git worktree list --porcelain 2>/dev/null | grep "$branch_name" | head -1 | sed 's/worktree //')
+    wt_path=$(git worktree list --porcelain 2>/dev/null | grep -F "$branch_name" | head -1 | sed 's/worktree //')
     if [ -n "$wt_path" ] && [ -d "$wt_path" ]; then
         git worktree remove "$wt_path" --force 2>/dev/null || true
     fi
@@ -260,7 +262,7 @@ cleanup_worktree() {
 
 cleanup_stale_worktrees() {
     log "Cleaning up stale worktrees..."
-    for wt in $(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | sed 's/worktree //' | grep -v "^$REPO_ROOT$"); do
+    for wt in $(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | sed 's/worktree //' | grep -vxF "$REPO_ROOT"); do
         if [ ! -d "$wt" ]; then
             continue
         fi
@@ -317,13 +319,7 @@ DRAFT_BRANCH="wip/pending-matches"
 
 # Initialize empty status file, and clear stale "pending" entries from crashed runs
 [ -f "$DRAFT_STATUS_FILE" ] || echo '[]' > "$DRAFT_STATUS_FILE"
-python3 -c "
-import json, sys
-f = sys.argv[1]
-entries = json.load(open(f))
-entries = [e for e in entries if e.get('status') != 'pending']
-json.dump(entries, open(f, 'w'), indent=2)
-" "$DRAFT_STATUS_FILE" 2>/dev/null || true
+python3 "$HELPERS" draft-pr-clear-pending "$DRAFT_STATUS_FILE" 2>/dev/null || true
 
 draft_pr_set_status() {
     # Usage: draft_pr_set_status <func_name> <file> <status> [detail] [context]
@@ -346,7 +342,7 @@ cherry_pick_to_draft() {
 
     # Get commits unique to the worktree branch (src/ only)
     local commits
-    commits=$(git rev-list --reverse upstream/master.."$src_branch" 2>/dev/null)
+    commits=$(git rev-list --reverse upstream/master.."$src_branch" 2>/dev/null || true)
     if [ -z "$commits" ]; then
         log "  (no commits to cherry-pick from $src_branch)"
         return
@@ -354,15 +350,16 @@ cherry_pick_to_draft() {
 
     git checkout "$DRAFT_BRANCH" 2>/dev/null || {
         log "  WARNING: could not checkout $DRAFT_BRANCH for cherry-pick"
-        git checkout "$current_branch" 2>/dev/null
+        git checkout "$current_branch" 2>/dev/null || git checkout master 2>/dev/null
         return
     }
 
     local picked=false
-    for commit in $commits; do
+    while IFS= read -r commit; do
+        [ -z "$commit" ] && continue
         # Only cherry-pick if the commit touches src/ files
         if git diff-tree --no-commit-id --name-only -r "$commit" | grep -q '^src/'; then
-            if git cherry-pick "$commit" 2>&1 | tee -a "$MAIN_LOG"; then
+            if git cherry-pick "$commit" >> "$MAIN_LOG" 2>&1; then
                 picked=true
             else
                 log "  WARNING: cherry-pick failed for $commit, aborting"
@@ -370,14 +367,14 @@ cherry_pick_to_draft() {
                 break
             fi
         fi
-    done
+    done <<< "$commits"
 
     if [ "$picked" = "true" ]; then
-        git push origin "$DRAFT_BRANCH" 2>&1 | tee -a "$MAIN_LOG" || log "  WARNING: push to $DRAFT_BRANCH failed"
+        git push origin "$DRAFT_BRANCH" >> "$MAIN_LOG" 2>&1 || log "  WARNING: push to $DRAFT_BRANCH failed"
         log "  Cherry-picked to $DRAFT_BRANCH and pushed"
     fi
 
-    git checkout "$current_branch" 2>/dev/null
+    git checkout "$current_branch" 2>/dev/null || git checkout master 2>/dev/null
 }
 
 setup_draft_pr() {
@@ -385,7 +382,7 @@ setup_draft_pr() {
     local fork_owner
     fork_owner=$(gh api user --jq '.login' 2>/dev/null || git remote get-url origin | sed 's|.*[:/]\([^/]*\)/.*|\1|')
 
-    if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -q "pending-matches"; then
+    if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -qF "pending-matches"; then
         DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open \
             --json number,headRefName --jq '.[] | select(.headRefName=="wip/pending-matches") | .number' 2>/dev/null || echo "")
         if [ -n "$DRAFT_PR_NUMBER" ]; then
@@ -413,6 +410,48 @@ setup_draft_pr() {
 }
 
 setup_draft_pr
+
+# Recover work from branches left behind by interrupted runs
+recover_interrupted_work() {
+    log "Checking for interrupted work..."
+    local recovered=0
+    while IFS= read -r branch; do
+        [ -z "$branch" ] && continue
+        # Only care about branches with src/ commits ahead of upstream
+        local src_count
+        src_count=$(git log --format="%H" upstream/master.."$branch" -- src/ 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$src_count" -eq 0 ]; then
+            # No src/ work — clean up the branch and worktree
+            cleanup_worktree "$branch"
+            git branch -D "$branch" 2>/dev/null || true
+            continue
+        fi
+
+        log "  Recovering $branch ($src_count src/ commit(s))..."
+        cherry_pick_to_draft "$branch"
+
+        # Extract function names from commit messages and update status
+        while IFS= read -r msg; do
+            local func_name
+            func_name=$(echo "$msg" | sed -n 's/.*[Dd]ecompile \([^ ]*\).*/\1/p')
+            [ -z "$func_name" ] && continue
+            local src_file
+            src_file=$(git log --format="" --name-only upstream/master.."$branch" -- 'src/*.c' 2>/dev/null | head -1)
+            draft_pr_set_status "$func_name" "${src_file:-unknown}" "matched" "100% (recovered)"
+            progress_save "$func_name" "success"
+            recovered=$((recovered + 1))
+        done < <(git log --format="%s" upstream/master.."$branch" -- src/ 2>/dev/null)
+
+        cleanup_worktree "$branch"
+        git branch -D "$branch" 2>/dev/null || true
+    done < <(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//')
+
+    if [ "$recovered" -gt 0 ]; then
+        log "  Recovered $recovered function(s) from interrupted runs"
+        draft_pr_update
+    fi
+}
+recover_interrupted_work
 
 while true; do
     if past_cutoff; then
@@ -478,43 +517,11 @@ while true; do
 
     # 4. Check GitHub for open PRs and issues to avoid conflicts
     log "Checking GitHub for existing work..."
-    EXCLUDED=$(python3 -c "
-import json, re, subprocess, sys
-names = set()
-try:
-    prs = json.loads(subprocess.run(
-        ['gh', 'pr', 'list', '--repo', '$REPO', '--state', 'open', '--limit', '100', '--json', 'title,body,number'],
-        capture_output=True, text=True).stdout or '[]')
-    issues = json.loads(subprocess.run(
-        ['gh', 'issue', 'list', '--repo', '$REPO', '--state', 'open', '--limit', '100', '--json', 'title,body'],
-        capture_output=True, text=True).stdout or '[]')
-except Exception:
-    prs, issues = [], []
-# Extract function names from PR/issue titles and bodies
-for item in prs + issues:
-    text = (item.get('title','') + ' ' + item.get('body','')).lower()
-    for m in re.finditer(r'\b(fn_[0-9a-f]{6,}|ft[A-Z]\w*_\w+|gr\w+_\w+|it_\w+|gm\w+_\w+)\b', text, re.I):
-        names.add(m.group(1).lower())
-# Also scan PR diffs for stub removals (lines like '- /// #funcName')
-for pr in prs:
-    num = pr.get('number')
-    if not num:
-        continue
-    try:
-        diff = subprocess.run(
-            ['gh', 'api', 'repos/$REPO/pulls/{}/files'.format(num),
-             '--jq', '.[].patch // empty'],
-            capture_output=True, text=True, timeout=10).stdout or ''
-        for m in re.finditer(r'^-.*/// #(\w+)', diff, re.MULTILINE):
-            names.add(m.group(1).lower())
-    except Exception:
-        pass
-print(json.dumps(list(names)))
-")
+    EXCLUDED=$(python3 "$HELPERS" github-exclusions "$REPO" 2>/dev/null || echo '[]')
     log "Excluded $(echo "$EXCLUDED" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))") functions from open PRs/issues"
 
     # Collect functions that already have decomp branches (with or without worktree- prefix)
-    BRANCH_FUNCS=$(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[* ]*//' | sed 's/^worktree-//' | sed 's/^decomp-//' | sort -u)
+    BRANCH_FUNCS=$(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//' | sed 's/^worktree-//' | sed 's/^decomp-//' | sort -u)
 
     # 5. Filter stubs: remove excluded, enforce size limit, exclude already-attempted
     TARGETS=$(echo "$STUBS_JSON" | python3 "$HELPERS" filter-stubs "$EXCLUDED" "$BRANCH_FUNCS" "$PROGRESS_FILE" "$BATCH_SIZE")
@@ -534,6 +541,12 @@ print(json.dumps(targets))
     BATCH_COUNT=$(echo "$BATCH" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
     FIRST_NAME=$(echo "$BATCH" | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['name'])")
     FUNC_FILE=$(echo "$BATCH" | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['file'])")
+
+    # Validate FUNC_FILE path
+    if [[ "$FUNC_FILE" != src/* ]]; then
+        log "  ERROR: FUNC_FILE '$FUNC_FILE' does not start with src/, skipping"
+        continue
+    fi
 
     # Derive paths from the file
     ASM_FILE="build/GALE01/asm/${FUNC_FILE#src/}"
@@ -571,6 +584,7 @@ print(json.dumps(targets))
 
     # Build trimmed context (stubs + nearby examples) instead of full file
     ALL_FUNC_NAMES=$(echo "$BATCH" | python3 -c "import json,sys; print(' '.join(f['name'] for f in json.load(sys.stdin)))")
+    # shellcheck disable=SC2086
     CONTEXT_C=$(python3 "$HELPERS" trim-context "$FUNC_FILE" $ALL_FUNC_NAMES 2>/dev/null || cat "$FUNC_FILE" 2>/dev/null || echo "(file not found)")
     CONTEXT_H=$(cat "$HEADER_FILE" 2>/dev/null || echo "(no header)")
 
@@ -599,9 +613,11 @@ $func_m2c
     done < <(echo "$BATCH" | python3 -c "import json,sys; [print(json.dumps(f)) for f in json.load(sys.stdin)]")
 
     # Resolve callee signatures for all target functions
+    # shellcheck disable=SC2086
     CALLEE_SIGS=$(python3 "$REPO_ROOT/scripts/resolve_callees.py" "$ASM_FILE" $ALL_FUNC_NAMES 2>/dev/null || echo "(callee resolution failed)")
 
     # Resolve SDA float constants from the asm file
+    # shellcheck disable=SC2086
     SDA_CONSTANTS=$(python3 "$HELPERS" resolve-sda-constants "$ASM_FILE" $ALL_FUNC_NAMES 2>/dev/null || echo "(no SDA constants)")
 
     # Extract main struct definition based on module prefix
@@ -826,7 +842,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         log "  ✓ SUCCESS!"
 
         # Find the worktree branch (claude --worktree prefixes with "worktree-")
-        WT_BRANCH=$(git branch --list "*${BRANCH_NAME}*" 2>/dev/null | grep -v '^\*' | head -1 | tr -d ' +' || echo "$BRANCH_NAME")
+        WT_BRANCH=$(git branch --list "*${BRANCH_NAME}*" 2>/dev/null | grep -v '^\*' | head -1 | sed 's/^[+* ]*//' || echo "$BRANCH_NAME")
         if [ -n "$WT_BRANCH" ] && [ "$AUTO_PUSH" = "true" ]; then
             log "  Pushing branch $WT_BRANCH..."
             git push -u origin "$WT_BRANCH" 2>&1 | tail -2 | tee -a "$MAIN_LOG"
