@@ -415,41 +415,65 @@ setup_draft_pr
 recover_interrupted_work() {
     log "Checking for interrupted work..."
     local recovered=0
+    local branches
+    branches=$(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//' || true)
+    if [ -z "$branches" ]; then
+        return 0
+    fi
     while IFS= read -r branch; do
         [ -z "$branch" ] && continue
         # Only care about branches with src/ commits ahead of upstream
         local src_count
-        src_count=$(git log --format="%H" upstream/master.."$branch" -- src/ 2>/dev/null | wc -l | tr -d ' ')
+        src_count=$(git log --format="%H" upstream/master.."$branch" -- src/ 2>/dev/null | wc -l | tr -d ' ' || echo 0)
         if [ "$src_count" -eq 0 ]; then
             # No src/ work — clean up the branch and worktree
+            log "  Cleaning up empty branch $branch"
             cleanup_worktree "$branch"
             git branch -D "$branch" 2>/dev/null || true
             continue
         fi
 
-        log "  Recovering $branch ($src_count src/ commit(s))..."
+        # Check if these commits are already on the draft branch
+        local new_count=0
+        while IFS= read -r sha; do
+            [ -z "$sha" ] && continue
+            if ! git branch --contains "$sha" 2>/dev/null | grep -qF "$DRAFT_BRANCH"; then
+                new_count=$((new_count + 1))
+            fi
+        done < <(git log --format="%H" upstream/master.."$branch" -- src/ 2>/dev/null)
+
+        if [ "$new_count" -eq 0 ]; then
+            log "  Branch $branch: all $src_count src/ commit(s) already on $DRAFT_BRANCH, cleaning up"
+            cleanup_worktree "$branch"
+            git branch -D "$branch" 2>/dev/null || true
+            continue
+        fi
+
+        log "  Recovering $branch ($new_count new src/ commit(s))..."
         cherry_pick_to_draft "$branch"
 
         # Extract function names from commit messages and update status
+        # Match both "Decomp funcName" and "decompile funcName" patterns
         while IFS= read -r msg; do
             local func_name
-            func_name=$(echo "$msg" | sed -n 's/.*[Dd]ecompile \([^ ]*\).*/\1/p')
+            func_name=$(echo "$msg" | sed -n 's/.*[Dd]ecomp[ile]* \([^ ]*\).*/\1/p')
             [ -z "$func_name" ] && continue
             local src_file
-            src_file=$(git log --format="" --name-only upstream/master.."$branch" -- 'src/*.c' 2>/dev/null | head -1)
-            draft_pr_set_status "$func_name" "${src_file:-unknown}" "matched" "100% (recovered)"
-            progress_save "$func_name" "success"
+            src_file=$(git log --format="" --name-only upstream/master.."$branch" -- 'src/*.c' 2>/dev/null | head -1 || true)
+            draft_pr_set_status "$func_name" "${src_file:-unknown}" "matched" "100% (recovered)" || true
+            progress_save "$func_name" "success" || true
             recovered=$((recovered + 1))
         done < <(git log --format="%s" upstream/master.."$branch" -- src/ 2>/dev/null)
 
         cleanup_worktree "$branch"
         git branch -D "$branch" 2>/dev/null || true
-    done < <(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//')
+    done <<< "$branches"
 
     if [ "$recovered" -gt 0 ]; then
         log "  Recovered $recovered function(s) from interrupted runs"
-        draft_pr_update
+        draft_pr_update || true
     fi
+    return 0
 }
 recover_interrupted_work
 
