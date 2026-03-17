@@ -410,6 +410,9 @@ setup_draft_pr() {
 }
 
 setup_draft_pr
+# Push cleaned draft PR body (pending entries were cleared above) so that
+# github-exclusions doesn't pick up stale "pending" entries from the PR body
+draft_pr_update
 
 # Recover work from branches left behind by interrupted runs
 recover_interrupted_work() {
