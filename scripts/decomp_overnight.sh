@@ -310,10 +310,10 @@ fi
 TOTAL_SUCCESSES=0
 TOTAL_FAILURES=0
 
-# Draft PR for live progress tracking
-DRAFT_STATUS_FILE="$LOG_DIR/draft_status_$(date +%Y%m%d).json"
+# Draft PR for live progress tracking (persistent across runs)
+DRAFT_STATUS_FILE="$LOG_DIR/draft_status.json"
 DRAFT_PR_NUMBER=""
-DRAFT_BRANCH="decomp-overnight-$(date +%Y%m%d)"
+DRAFT_BRANCH="wip/pending-matches"
 
 # Initialize empty status file, and clear stale "pending" entries from crashed runs
 [ -f "$DRAFT_STATUS_FILE" ] || echo '[]' > "$DRAFT_STATUS_FILE"
@@ -338,30 +338,72 @@ draft_pr_update() {
         -f body="$body" >/dev/null 2>&1 || log "  (draft PR update failed)"
 }
 
+# Cherry-pick successful commits from a worktree branch onto wip/pending-matches
+cherry_pick_to_draft() {
+    local src_branch="$1"
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+    # Get commits unique to the worktree branch (src/ only)
+    local commits
+    commits=$(git rev-list --reverse upstream/master.."$src_branch" 2>/dev/null)
+    if [ -z "$commits" ]; then
+        log "  (no commits to cherry-pick from $src_branch)"
+        return
+    fi
+
+    git checkout "$DRAFT_BRANCH" 2>/dev/null || {
+        log "  WARNING: could not checkout $DRAFT_BRANCH for cherry-pick"
+        git checkout "$current_branch" 2>/dev/null
+        return
+    }
+
+    local picked=false
+    for commit in $commits; do
+        # Only cherry-pick if the commit touches src/ files
+        if git diff-tree --no-commit-id --name-only -r "$commit" | grep -q '^src/'; then
+            if git cherry-pick "$commit" 2>&1 | tee -a "$MAIN_LOG"; then
+                picked=true
+            else
+                log "  WARNING: cherry-pick failed for $commit, aborting"
+                git cherry-pick --abort 2>/dev/null || true
+                break
+            fi
+        fi
+    done
+
+    if [ "$picked" = "true" ]; then
+        git push origin "$DRAFT_BRANCH" 2>&1 | tee -a "$MAIN_LOG" || log "  WARNING: push to $DRAFT_BRANCH failed"
+        log "  Cherry-picked to $DRAFT_BRANCH and pushed"
+    fi
+
+    git checkout "$current_branch" 2>/dev/null
+}
+
 setup_draft_pr() {
-    # Create a lightweight branch with an empty commit for the draft PR
-    if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -q "$DRAFT_BRANCH"; then
-        # Branch exists — find existing draft PR
-        DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open --head "$DRAFT_BRANCH" \
+    # Find existing draft PR for wip/pending-matches
+    local fork_owner
+    fork_owner=$(gh api user --jq '.login' 2>/dev/null || git remote get-url origin | sed 's|.*[:/]\([^/]*\)/.*|\1|')
+
+    if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -q "pending-matches"; then
+        DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open --head "$fork_owner:$DRAFT_BRANCH" \
             --json number --jq '.[0].number' 2>/dev/null || echo "")
         if [ -n "$DRAFT_PR_NUMBER" ]; then
-            log "Resuming draft PR #$DRAFT_PR_NUMBER"
+            log "Resuming draft PR #$DRAFT_PR_NUMBER ($DRAFT_BRANCH)"
             return
         fi
     fi
-    # Create branch with an empty commit (GitHub requires a diff to create a PR)
-    git branch -f "$DRAFT_BRANCH" upstream/master 2>/dev/null
-    git checkout "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not checkout draft branch"; return; }
-    git commit --allow-empty -m "Overnight decomp run — $(date +%Y-%m-%d)" 2>/dev/null
-    git checkout master 2>/dev/null
-    git push -u origin "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not push draft branch"; return; }
-    # Create draft PR
+
+    # Branch doesn't exist or no PR — create both
+    if ! git rev-parse --verify "$DRAFT_BRANCH" >/dev/null 2>&1; then
+        git branch "$DRAFT_BRANCH" upstream/master 2>/dev/null
+    fi
+    git push -u origin "$DRAFT_BRANCH" 2>/dev/null || { log "WARNING: could not push $DRAFT_BRANCH"; return; }
+
     local body
-    body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null || echo "## Progress\n(starting...)")
-    local fork_owner
-    fork_owner=$(gh api user --jq '.login' 2>/dev/null || git remote get-url origin | sed 's|.*[:/]\([^/]*\)/.*|\1|')
+    body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null || echo "## Pending Matches\n(starting...)")
     DRAFT_PR_NUMBER=$(gh pr create --repo "$REPO" --head "$fork_owner:$DRAFT_BRANCH" --draft \
-        --title "Overnight decomp run — $(date +%Y-%m-%d)" \
+        --title "Work in progress — pending matches" \
         --body "$body" 2>/dev/null | grep -oE '[0-9]+$' || echo "")
     if [ -n "$DRAFT_PR_NUMBER" ]; then
         log "Created draft PR #$DRAFT_PR_NUMBER"
@@ -815,6 +857,14 @@ EOF
         fi
         # Clean up worktree (branch with commit persists)
         cleanup_worktree "$BRANCH_NAME"
+
+        # Cherry-pick matched commits onto the draft PR branch
+        if [ -n "$WT_BRANCH" ]; then
+            cherry_pick_to_draft "$WT_BRANCH"
+            # Clean up the per-function branch now that commits are on wip/pending-matches
+            git branch -D "$WT_BRANCH" 2>/dev/null || true
+        fi
+
         TOTAL_SUCCESSES=$((TOTAL_SUCCESSES + BATCH_COUNT))
         while IFS= read -r fname; do
             progress_save "$fname" "success"
