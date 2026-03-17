@@ -479,21 +479,36 @@ while true; do
     # 4. Check GitHub for open PRs and issues to avoid conflicts
     log "Checking GitHub for existing work..."
     EXCLUDED=$(python3 -c "
-import json, re, subprocess
+import json, re, subprocess, sys
+names = set()
 try:
     prs = json.loads(subprocess.run(
-        ['gh', 'pr', 'list', '--repo', '$REPO', '--state', 'open', '--limit', '100', '--json', 'title,body'],
+        ['gh', 'pr', 'list', '--repo', '$REPO', '--state', 'open', '--limit', '100', '--json', 'title,body,number'],
         capture_output=True, text=True).stdout or '[]')
     issues = json.loads(subprocess.run(
         ['gh', 'issue', 'list', '--repo', '$REPO', '--state', 'open', '--limit', '100', '--json', 'title,body'],
         capture_output=True, text=True).stdout or '[]')
 except Exception:
     prs, issues = [], []
-names = set()
+# Extract function names from PR/issue titles and bodies
 for item in prs + issues:
     text = (item.get('title','') + ' ' + item.get('body','')).lower()
     for m in re.finditer(r'\b(fn_[0-9a-f]{6,}|ft[A-Z]\w*_\w+|gr\w+_\w+|it_\w+|gm\w+_\w+)\b', text, re.I):
         names.add(m.group(1).lower())
+# Also scan PR diffs for stub removals (lines like '- /// #funcName')
+for pr in prs:
+    num = pr.get('number')
+    if not num:
+        continue
+    try:
+        diff = subprocess.run(
+            ['gh', 'api', 'repos/$REPO/pulls/{}/files'.format(num),
+             '--jq', '.[].patch // empty'],
+            capture_output=True, text=True, timeout=10).stdout or ''
+        for m in re.finditer(r'^-.*/// #(\w+)', diff, re.MULTILINE):
+            names.add(m.group(1).lower())
+    except Exception:
+        pass
 print(json.dumps(list(names)))
 ")
     log "Excluded $(echo "$EXCLUDED" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))") functions from open PRs/issues"
