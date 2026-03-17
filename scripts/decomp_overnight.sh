@@ -38,7 +38,23 @@ cleanup() {
     wait 2>/dev/null || true
     exit $rc
 }
-trap cleanup INT TERM EXIT
+
+# Ctrl+C: kill active Claude session, let the script clean up gracefully
+STOP_REQUESTED=false
+handle_interrupt() {
+    STOP_REQUESTED=true
+    if [ -n "${CLAUDE_PID:-}" ] && kill -0 "$CLAUDE_PID" 2>/dev/null; then
+        log ""
+        log "  Ctrl+C received, stopping Claude session..."
+        kill "$CLAUDE_PID" 2>/dev/null || true
+        pkill -P "$CLAUDE_PID" 2>/dev/null || true
+    else
+        log ""
+        log "  Ctrl+C received, finishing current step..."
+    fi
+}
+trap handle_interrupt INT
+trap cleanup TERM EXIT
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
@@ -483,6 +499,10 @@ recover_interrupted_work() {
 recover_interrupted_work
 
 while true; do
+    if [ "$STOP_REQUESTED" = "true" ]; then
+        log "Stopping (user interrupt)."
+        break
+    fi
     if past_cutoff; then
         log "Past cutoff time, stopping."
         break
@@ -858,6 +878,19 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     # Sum token usage
     FUNC_TOKENS=$(python3 "$HELPERS" token-usage "$FUNC_STREAM_LOG" 2>/dev/null || echo "tokens=unknown")
     log "  [tokens] $FUNC_TOKENS"
+
+    # Ctrl+C during Claude session: clean up and exit gracefully
+    if [ "$STOP_REQUESTED" = "true" ]; then
+        log "  Interrupted by user, cleaning up..."
+        cleanup_worktree "$BRANCH_NAME"
+        git branch -D "$BRANCH_NAME" 2>/dev/null || true
+        git branch -D "worktree-$BRANCH_NAME" 2>/dev/null || true
+        while IFS= read -r fname; do
+            draft_pr_set_status "$fname" "$FUNC_FILE" "failed" "interrupted" || true
+        done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+        draft_pr_update || true
+        break
+    fi
 
     # Skip result parsing if we were rate limited — don't save progress so it's retried
     if [ "$RATE_LIMITED" = "true" ]; then
