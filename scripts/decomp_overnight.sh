@@ -386,8 +386,8 @@ setup_draft_pr() {
     fork_owner=$(gh api user --jq '.login' 2>/dev/null || git remote get-url origin | sed 's|.*[:/]\([^/]*\)/.*|\1|')
 
     if git ls-remote --heads origin "$DRAFT_BRANCH" 2>/dev/null | grep -q "pending-matches"; then
-        DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open --head "$fork_owner:$DRAFT_BRANCH" \
-            --json number --jq '.[0].number' 2>/dev/null || echo "")
+        DRAFT_PR_NUMBER=$(gh pr list --repo "$REPO" --state open \
+            --json number,headRefName --jq '.[] | select(.headRefName=="wip/pending-matches") | .number' 2>/dev/null || echo "")
         if [ -n "$DRAFT_PR_NUMBER" ]; then
             log "Resuming draft PR #$DRAFT_PR_NUMBER ($DRAFT_BRANCH)"
             return
