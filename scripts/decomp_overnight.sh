@@ -826,7 +826,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         log "  ✓ SUCCESS!"
 
         # Find the worktree branch (claude --worktree prefixes with "worktree-")
-        WT_BRANCH=$(git branch --list "*${BRANCH_NAME}*" 2>/dev/null | grep -v '^\*' | head -1 | tr -d ' ' || echo "$BRANCH_NAME")
+        WT_BRANCH=$(git branch --list "*${BRANCH_NAME}*" 2>/dev/null | grep -v '^\*' | head -1 | tr -d ' +' || echo "$BRANCH_NAME")
         if [ -n "$WT_BRANCH" ] && [ "$AUTO_PUSH" = "true" ]; then
             log "  Pushing branch $WT_BRANCH..."
             git push -u origin "$WT_BRANCH" 2>&1 | tail -2 | tee -a "$MAIN_LOG"
