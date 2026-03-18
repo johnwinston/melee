@@ -543,7 +543,15 @@ while true; do
             python3 configure.py --wrapper wine 2>&1 >> "$MAIN_LOG"
             log "  Running ninja (timeout: ${NINJA_TIMEOUT}s)..."
             if ! run_ninja_with_watchdog; then
-                log "ERROR: Master doesn't build clean. Aborting."; exit 1
+                log "  Build failed, retrying with clean state..."
+                wineserver -k 2>/dev/null || true
+                pkill -9 -f wine-preloader 2>/dev/null || true
+                sleep 3
+                python3 configure.py --wrapper wine 2>&1 >> "$MAIN_LOG"
+                log "  Running ninja (retry)..."
+                if ! run_ninja_with_watchdog; then
+                    log "ERROR: Master doesn't build clean after retry. Aborting."; exit 1
+                fi
             fi
             log "Master builds OK"
         else
