@@ -177,6 +177,7 @@ SCAN_MODE=${SCAN_MODE:-all}
 CONTINUOUS=${CONTINUOUS:-true}
 CUTOFF_HOUR=${CUTOFF_HOUR:-0}
 AUTO_PUSH=${AUTO_PUSH:-false}
+USAGE_LIMIT=${USAGE_LIMIT:-75}
 BATCH_SIZE=${BATCH_SIZE:-5}
 PROGRESS_FILE="$LOG_DIR/progress_$(date +%Y%m%d).json"
 
@@ -791,6 +792,10 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
       RESULTS: func1=SUCCESS func2=FAILURE(best=XX.X%) func3=SUCCESS"
 
     check_usage
+    if [ "$USAGE_WEEKLY_PCT" -ge "$USAGE_LIMIT" ] 2>/dev/null; then
+        log "  Weekly usage at ${USAGE_WEEKLY_PCT}% (limit: ${USAGE_LIMIT}%), stopping."
+        break
+    fi
 
     log "  Spawning Claude session..."
     FUNC_STREAM_LOG="$LOG_DIR/${FIRST_NAME}_${TIMESTAMP}_stream.jsonl"
