@@ -416,7 +416,7 @@ setup_draft_pr() {
     local body
     body=$(python3 "$HELPERS" draft-pr-body "$DRAFT_STATUS_FILE" 2>/dev/null || echo "## Pending Matches\n(starting...)")
     DRAFT_PR_NUMBER=$(gh pr create --repo "$REPO" --head "$fork_owner:$DRAFT_BRANCH" --draft \
-        --title "Work in progress — pending matches" \
+        --title "Match progress" \
         --body "$body" 2>/dev/null | grep -oE '[0-9]+$' || echo "")
     if [ -n "$DRAFT_PR_NUMBER" ]; then
         log "Created draft PR #$DRAFT_PR_NUMBER"
