@@ -584,7 +584,8 @@ def cmd_github_exclusions(repo):
         prs, issues = [], []
     # Skip the draft progress-tracking PR (wip/pending-matches) — it lists
     # functions we've already tried, not someone else's in-progress work
-    prs = [p for p in prs if "pending matches" not in p.get("title", "").lower()]
+    prs = [p for p in prs if p.get("title", "").lower() not in
+           ("work in progress — pending matches", "match progress")]
     for item in prs + issues:
         text = (item.get("title", "") + " " + item.get("body", "")).lower()
         for m in re.finditer(
