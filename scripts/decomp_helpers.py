@@ -20,6 +20,10 @@ Subcommands:
     parse-rate-limit <log> <backoff>      Parse rate limit reset time
     resolve-sda-constants <asm> <func...> Resolve SDA float constants from asm
     extract-struct <header> <name>        Extract struct definition from header
+    draft-pr-body <status_file>          Generate draft PR body markdown
+    draft-pr-set-status <file> ...       Update function status in draft PR
+    draft-pr-clear-pending <file>        Clear stale pending entries
+    github-exclusions <repo>             List function names from open PRs/issues
 """
 
 import json
