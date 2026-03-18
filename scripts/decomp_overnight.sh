@@ -573,7 +573,7 @@ while true; do
     BRANCH_FUNCS=$(git branch --list 'decomp-*' 'worktree-decomp-*' 2>/dev/null | sed 's/^[+* ]*//' | sed 's/^worktree-//' | sed 's/^decomp-//' | sort -u)
 
     # 5. Filter stubs: remove excluded, enforce size limit, exclude already-attempted
-    TARGETS=$(echo "$STUBS_JSON" | python3 "$HELPERS" filter-stubs "$EXCLUDED" "$BRANCH_FUNCS" "$PROGRESS_FILE" "$BATCH_SIZE")
+    TARGETS=$(echo "$STUBS_JSON" | python3 "$HELPERS" filter-stubs "$EXCLUDED" "$BRANCH_FUNCS" "$PROGRESS_FILE" "$BATCH_SIZE" "$DRAFT_STATUS_FILE")
 
     # 6. Pick the next target(s) to decompile
     BATCH=$(echo "$TARGETS" | python3 -c "
