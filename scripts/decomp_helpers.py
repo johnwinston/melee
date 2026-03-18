@@ -214,7 +214,8 @@ def cmd_extract_log(stream_log, output_log):
         pass
 
 
-def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size="1"):
+def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size="1",
+                     draft_status_file=""):
     """Filter stubs from stdin JSON, remove excluded/tried/branched.
 
     Reads stubs JSON array from stdin.
@@ -230,6 +231,16 @@ def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size=
         with open(progress_file) as f:
             progress = json.load(f)
     already_tried = set(e["name"] for e in progress)
+
+    # Also exclude functions already matched in the draft status file (persists across days)
+    if draft_status_file and os.path.exists(draft_status_file):
+        try:
+            with open(draft_status_file) as f:
+                for e in json.load(f):
+                    if e.get("status") == "matched":
+                        already_tried.add(e["name"])
+        except (json.JSONDecodeError, KeyError):
+            pass
 
     branch_funcs = set(
         line for line in branch_funcs_str.strip().splitlines() if line
