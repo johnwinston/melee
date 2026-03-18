@@ -170,7 +170,26 @@ void ftKb_AttackDashAir_800F22D4(Fighter_GObj* gobj)
     ftPartSetRotX(ft, 0, 0.0F);
 }
 
-/// #ftKb_SpecialHi_Enter
+void ftKb_SpecialHi_Enter(Fighter_GObj* gobj)
+{
+    Fighter* fp = GET_FIGHTER(gobj);
+    fp->cmd_vars[3] = 0;
+    fp->cmd_vars[2] = 0;
+    fp->cmd_vars[1] = 0;
+    fp->cmd_vars[0] = 0;
+    fp->mv.kb.specialhi.x0 = 0;
+    fp->mv.kb.specialhi.x4 = 0;
+    fp->mv.kb.specialhi.x8.i = 0;
+    fp->mv.kb.specialhi.xC = 0;
+    Fighter_ChangeMotionState(gobj, ftKb_MS_SpecialHi1, 0, 0.0f, 1.0f, 0.0f,
+                              NULL);
+    ftAnim_8006EBA4(gobj);
+    fp = GET_FIGHTER(gobj);
+    efSync_Spawn(0x494, gobj);
+    fp->x2219_b0 = 1;
+    fp->pre_hitlag_cb = efLib_PauseAll;
+    fp->post_hitlag_cb = efLib_ResumeAll;
+}
 
 /// #ftKb_SpecialAirHi_Enter
 
