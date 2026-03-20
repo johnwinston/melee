@@ -266,6 +266,16 @@ progress_save() {
     python3 "$HELPERS" progress-save "$PROGRESS_FILE" "$1" "$2"
 }
 
+# Look up a single function's result in the parsed RESULT_LINE.
+# Returns "success" or "failure". Defaults to "success" if not found
+# (single-function batches rarely emit per-function lines).
+get_func_result() {
+    local fname="$1"
+    local result
+    result=$(echo "$RESULT_LINE" | grep "^func_${fname}=" | sed "s/^func_${fname}=//" | head -1 || true)
+    echo "${result:-success}"
+}
+
 progress_already_tried() {
     [ -f "$PROGRESS_FILE" ] && python3 "$HELPERS" progress-check "$PROGRESS_FILE" "$1" 2>/dev/null
 }
@@ -1011,11 +1021,21 @@ EOF
             fi
         fi
 
-        TOTAL_SUCCESSES=$((TOTAL_SUCCESSES + BATCH_COUNT))
+        BATCH_SUCCESSES=0
+        BATCH_FAILURES=0
         while IFS= read -r fname; do
-            progress_save "$fname" "success"
-            draft_pr_set_status "$fname" "$FUNC_FILE" "matched" "100%" "$RESULT_CONTEXT"
+            if [ "$(get_func_result "$fname")" = "success" ]; then
+                progress_save "$fname" "success"
+                draft_pr_set_status "$fname" "$FUNC_FILE" "matched" "100%" "$RESULT_CONTEXT"
+                BATCH_SUCCESSES=$((BATCH_SUCCESSES + 1))
+            else
+                progress_save "$fname" "failure"
+                draft_pr_set_status "$fname" "$FUNC_FILE" "failed" "partial batch"
+                BATCH_FAILURES=$((BATCH_FAILURES + 1))
+            fi
         done < <(echo "$BATCH" | python3 -c "import json,sys; [print(f['name']) for f in json.load(sys.stdin)]")
+        TOTAL_SUCCESSES=$((TOTAL_SUCCESSES + BATCH_SUCCESSES))
+        TOTAL_FAILURES=$((TOTAL_FAILURES + BATCH_FAILURES))
         draft_pr_update
     else
         BEST=$(echo "$RESULT_LINE" | sed -n 's/.*best=//p' || echo "?")

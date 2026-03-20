@@ -164,6 +164,15 @@ def cmd_parse_result(log_file):
         else:
             print(f"status=failure best=?")
 
+    # Emit per-function results from "RESULTS: func1=SUCCESS func2=FAILURE(best=X%)" line
+    results_match = re.search(r"RESULTS:\s*(.+?)(?:\n|$)", result_text)
+    if results_match:
+        for part in results_match.group(1).split():
+            m = re.match(r"([A-Za-z_0-9]+)=(SUCCESS|FAILURE)", part)
+            if m:
+                fname, fstatus = m.group(1), m.group(2)
+                print(f"func_{fname}={'success' if fstatus == 'SUCCESS' else 'failure'}")
+
 
 def cmd_token_usage(log_file):
     """Sum token usage across all assistant messages in stream JSON."""
