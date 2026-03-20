@@ -179,6 +179,9 @@ CUTOFF_HOUR=${CUTOFF_HOUR:-0}
 AUTO_PUSH=${AUTO_PUSH:-false}
 BATCH_SIZE=${BATCH_SIZE:-5}
 PROGRESS_FILE="$LOG_DIR/progress_$(date +%Y%m%d).json"
+PERMUTER_PATH=${PERMUTER_PATH:-}
+PERMUTER_JOBS=${PERMUTER_JOBS:-4}
+PERMUTER_TIMEOUT=${PERMUTER_TIMEOUT:-300}
 
 log() {
     echo "[$(date '+%H:%M:%S')] $*" | tee -a "$MAIN_LOG"
@@ -702,6 +705,23 @@ for f in json.load(sys.stdin):
     print(f'  - {f[\"name\"]} ({f[\"size\"]} bytes, stub marker /// #{f[\"name\"]} at line {f[\"line\"]})')
 ")
 
+    # Build optional permuter hint (only included if PERMUTER_PATH is set)
+    PERMUTER_HINT=""
+    if [ -n "$PERMUTER_PATH" ]; then
+        PERMUTER_HINT="
+   FOR REMAINING REGISTER ALLOCATION DIFFERENCES (90%+ match but still stuck): The decomp-permuter
+   can automatically find source mutations that coax the compiler into the right register choices.
+   # From the worktree root, import the function (creates nonmatchings/FUNC_NAME/):
+   python3 $PERMUTER_PATH/import.py $FUNC_FILE $ASM_FILE
+   # Run permuter — stops automatically when score=0 (perfect match):
+   timeout $PERMUTER_TIMEOUT python3 $PERMUTER_PATH/permuter.py -j$PERMUTER_JOBS --stop-on-zero nonmatchings/FUNC_NAME/
+   # When score=0 is printed, the winning code is in nonmatchings/FUNC_NAME/base.c
+   # Diff it against the original to find the minimal change, apply to $FUNC_FILE, verify.
+   # Clean up: rm -rf nonmatchings/
+   Only use the permuter AFTER exhausting manual approaches — it finds matches mechanically,
+   not by understanding. Integrate only the minimal change needed (e.g. one PERM_GENERAL macro)."
+    fi
+
     PROMPT="You are autonomously decompiling functions for the Melee decompilation project.
 You must work completely autonomously — no human will intervene.
 
@@ -736,6 +756,7 @@ WORKFLOW:
    ln -s $REPO_ROOT/.venv .venv
    cp $REPO_ROOT/build.ninja build.ninja
    cp $REPO_ROOT/objdiff.json objdiff.json 2>/dev/null || true
+   cp $REPO_ROOT/permuter_settings.toml permuter_settings.toml 2>/dev/null || true
    DO NOT run configure.py — it is already done. Just use ninja to compile after editing.
 
 1. FOR EACH FUNCTION, clean up the m2c output using patterns from the source context:
@@ -773,7 +794,7 @@ WORKFLOW:
    Then read scripts/mwcc_debug/pcdump_\$(basename $FUNC_FILE .c).txt and search for
    your function. Key passes: AFTER REGISTER COLORING (shows physical register assignment),
    FINAL CODE (what gets emitted). This reveals why the compiler chose specific registers.
-
+$PERMUTER_HINT
 6. ITERATE up to 5 times per function. If still not 100%, revert ONLY that function's changes.
 
 7. FOR EACH FUNCTION AT 100% MATCH:
