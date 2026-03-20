@@ -353,7 +353,8 @@ draft_pr_update() {
         -f body="$body" >/dev/null 2>&1 || log "  (draft PR update failed)"
 }
 
-# Cherry-pick successful commits from a worktree branch onto wip/pending-matches
+# Cherry-pick successful commits from a worktree branch onto wip/pending-matches.
+# Returns 0 if at least one commit was cherry-picked, 1 otherwise.
 cherry_pick_to_draft() {
     local src_branch="$1"
     local current_branch
@@ -364,13 +365,20 @@ cherry_pick_to_draft() {
     commits=$(git rev-list --reverse upstream/master.."$src_branch" 2>/dev/null || true)
     if [ -z "$commits" ]; then
         log "  (no commits to cherry-pick from $src_branch)"
-        return
+        return 1
+    fi
+
+    # Stash dirty working tree so we can switch branches cleanly
+    local stashed=false
+    if ! git diff --quiet HEAD 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+        git stash push -m "overnight-cherry-pick-stash" >> "$MAIN_LOG" 2>&1 && stashed=true
     fi
 
     git checkout "$DRAFT_BRANCH" 2>/dev/null || {
         log "  WARNING: could not checkout $DRAFT_BRANCH for cherry-pick"
+        [ "$stashed" = "true" ] && git stash pop >> "$MAIN_LOG" 2>&1 || true
         git checkout "$current_branch" 2>/dev/null || git checkout master 2>/dev/null
-        return
+        return 1
     }
 
     local picked=false
@@ -394,6 +402,8 @@ cherry_pick_to_draft() {
     fi
 
     git checkout "$current_branch" 2>/dev/null || git checkout master 2>/dev/null
+    [ "$stashed" = "true" ] && git stash pop >> "$MAIN_LOG" 2>&1 || true
+    [ "$picked" = "true" ]
 }
 
 setup_draft_pr() {
@@ -991,9 +1001,14 @@ EOF
 
         # Cherry-pick matched commits onto the draft PR branch
         if [ -n "$WT_BRANCH" ]; then
-            cherry_pick_to_draft "$WT_BRANCH"
-            # Clean up the per-function branch now that commits are on wip/pending-matches
-            git branch -D "$WT_BRANCH" 2>/dev/null || true
+            if cherry_pick_to_draft "$WT_BRANCH"; then
+                # Clean up the per-function branch now that commits are on wip/pending-matches
+                git branch -D "$WT_BRANCH" 2>/dev/null || true
+                # Create draft PR now if it wasn't created earlier (wip/pending-matches now has commits)
+                [ -z "$DRAFT_PR_NUMBER" ] && setup_draft_pr
+            else
+                log "  Keeping branch $WT_BRANCH (cherry-pick failed — PR manually or next run)"
+            fi
         fi
 
         TOTAL_SUCCESSES=$((TOTAL_SUCCESSES + BATCH_COUNT))
