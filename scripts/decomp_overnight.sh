@@ -179,7 +179,7 @@ CUTOFF_HOUR=${CUTOFF_HOUR:-0}
 AUTO_PUSH=${AUTO_PUSH:-false}
 BATCH_SIZE=${BATCH_SIZE:-5}
 PROGRESS_FILE="$LOG_DIR/progress_$(date +%Y%m%d).json"
-PERMUTER_PATH=${PERMUTER_PATH:-}
+PERMUTER_PATH=${PERMUTER_PATH:-$HOME/dev/decomp-permuter}
 PERMUTER_JOBS=${PERMUTER_JOBS:-4}
 PERMUTER_TIMEOUT=${PERMUTER_TIMEOUT:-300}
 
@@ -707,7 +707,7 @@ for f in json.load(sys.stdin):
 
     # Build optional permuter hint (only included if PERMUTER_PATH is set)
     PERMUTER_HINT=""
-    if [ -n "$PERMUTER_PATH" ]; then
+    if [ -n "$PERMUTER_PATH" ] && [ -f "$PERMUTER_PATH/permuter.py" ]; then
         PERMUTER_HINT="
    FOR REMAINING REGISTER ALLOCATION DIFFERENCES (90%+ match but still stuck): The decomp-permuter
    can automatically find source mutations that coax the compiler into the right register choices.
