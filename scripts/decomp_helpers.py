@@ -236,12 +236,12 @@ def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size=
             progress = json.load(f)
     already_tried = set(e["name"] for e in progress)
 
-    # Also exclude functions already matched in the draft status file (persists across days)
+    # Also exclude functions already matched or persistently failed in the draft status file
     if draft_status_file and os.path.exists(draft_status_file):
         try:
             with open(draft_status_file) as f:
                 for e in json.load(f):
-                    if e.get("status") == "matched":
+                    if e.get("status") in ("matched", "failed"):
                         already_tried.add(e["name"])
         except (json.JSONDecodeError, KeyError):
             pass
