@@ -983,6 +983,20 @@ script -q -F "$FUNC_STREAM_LOG" claude \\
 WRAPPER_EOF
     chmod +x "$TMUX_WRAPPER"
 
+    # Seed claude-mem: copy melee observations into the worktree project name
+    # so this session can access knowledge from previous decomp sessions
+    CLAUDE_MEM_DB="$HOME/.claude-mem/claude-mem.db"
+    WT_PROJECT="decomp-${BRANCH_NAME}"
+    if [ -f "$CLAUDE_MEM_DB" ]; then
+        sqlite3 "$CLAUDE_MEM_DB" "
+            INSERT INTO observations (memory_session_id, project, text, type, title, subtitle, facts, narrative, concepts, files_read, files_modified, prompt_number, discovery_tokens, created_at, created_at_epoch, content_hash)
+            SELECT memory_session_id, '$WT_PROJECT', text, type, title, subtitle, facts, narrative, concepts, files_read, files_modified, prompt_number, discovery_tokens, created_at, created_at_epoch, content_hash || '-copy'
+            FROM observations
+            WHERE project = 'melee' AND type IN ('discovery', 'feature', 'decision')
+            AND content_hash NOT IN (SELECT content_hash FROM observations WHERE project = '$WT_PROJECT');
+        " 2>/dev/null || true
+    fi
+
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
