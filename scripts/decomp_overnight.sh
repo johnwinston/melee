@@ -951,11 +951,12 @@ WRAPPER_EOF
 
     # Wait for Claude to fully initialize (plugins, hooks, system reminders)
     log "  Waiting for Claude to initialize..."
-    sleep 20
+    sleep 20 || true
 
     # Send a short message via keystrokes telling Claude to read the prompt file
-    tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly."
-    tmux send-keys -t "$TMUX_SESSION" Enter
+    tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly." || true
+    sleep 1
+    tmux send-keys -t "$TMUX_SESSION" Enter || true
 
     TAIL_PID=""
 
