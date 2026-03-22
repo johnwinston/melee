@@ -938,7 +938,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 unset CLAUDECODE ANTHROPIC_API_KEY
 script -q -F "$FUNC_STREAM_LOG" claude \\
     --model "$MODEL" \\
-    --permission-mode plan \\
+    --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
     --verbose${PLUGIN_ARGS:+ \\
     $PLUGIN_ARGS}
@@ -955,7 +955,7 @@ WRAPPER_EOF
 
     # Send the prompt via keystrokes — Claude starts in plan mode,
     # will use superpowers to brainstorm/plan, then exit plan mode to execute
-    tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly. When your plan is ready, exit plan mode and execute it autonomously." || true
+    tmux send-keys -t "$TMUX_SESSION" -l "First, enter plan mode using the EnterPlanMode tool. Then read $PROMPT_FILE and create a plan for the task. When your plan is ready, exit plan mode and execute it autonomously." || true
     sleep 1
     tmux send-keys -t "$TMUX_SESSION" Enter || true
     log "  Prompt sent to Claude"
