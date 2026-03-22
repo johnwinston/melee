@@ -932,7 +932,16 @@ WRAPPER_EOF
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
     tmux pipe-pane -t "$TMUX_SESSION" -o "cat >> '$FUNC_STREAM_LOG'"
 
+    # Tail the log for live output (like stream-monitor does for headless mode)
+    tail -f "$FUNC_STREAM_LOG" 2>/dev/null \
+        | sed -u $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
+        | grep --line-buffered -vE '^\s*$' \
+        | sed -u 's/^/  [tmux] /' &
+    TAIL_PID=$!
+
     # Monitor for completion (RESULTS marker, idle timeout, or hard timeout)
+    # Min runtime prevents false matches on the RESULTS template in the prompt
+    TMUX_MIN_RUNTIME=${TMUX_MIN_RUNTIME:-60}
     TMUX_START=$(date +%s)
     LAST_SIZE=0
     IDLE_COUNT=0
@@ -943,35 +952,41 @@ WRAPPER_EOF
             break
         fi
 
-        # Check for RESULTS marker (strip ANSI codes)
-        if sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
-                "$FUNC_STREAM_LOG" 2>/dev/null | grep -q "RESULTS:"; then
-            log "  Results detected, giving Claude 15s to finish..."
-            sleep 15
-            tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
-            sleep 5
-            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
-            break
+        ELAPSED=$(( $(date +%s) - TMUX_START ))
+
+        # Only check for RESULTS after minimum runtime (prompt echoes the template)
+        if [ "$ELAPSED" -ge "$TMUX_MIN_RUNTIME" ]; then
+            if sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
+                    "$FUNC_STREAM_LOG" 2>/dev/null | grep -q "^RESULTS:"; then
+                log "  Results detected, giving Claude 30s to finish..."
+                sleep 30
+                tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
+                sleep 5
+                tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+                break
+            fi
         fi
 
         # Idle timeout: no new output for TMUX_IDLE_TIMEOUT seconds
-        CURRENT_SIZE=$(wc -c < "$FUNC_STREAM_LOG" 2>/dev/null || echo 0)
-        if [ "$CURRENT_SIZE" -eq "$LAST_SIZE" ]; then
-            IDLE_COUNT=$((IDLE_COUNT + 1))
-        else
-            IDLE_COUNT=0
-            LAST_SIZE=$CURRENT_SIZE
-        fi
-        if [ $((IDLE_COUNT * 5)) -ge "$TMUX_IDLE_TIMEOUT" ]; then
-            log "  No output for ${TMUX_IDLE_TIMEOUT}s, assuming done"
-            tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
-            sleep 5
-            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
-            break
+        # (only after min runtime to avoid killing during prompt loading)
+        if [ "$ELAPSED" -ge "$TMUX_MIN_RUNTIME" ]; then
+            CURRENT_SIZE=$(wc -c < "$FUNC_STREAM_LOG" 2>/dev/null || echo 0)
+            if [ "$CURRENT_SIZE" -eq "$LAST_SIZE" ]; then
+                IDLE_COUNT=$((IDLE_COUNT + 1))
+            else
+                IDLE_COUNT=0
+                LAST_SIZE=$CURRENT_SIZE
+            fi
+            if [ $((IDLE_COUNT * 5)) -ge "$TMUX_IDLE_TIMEOUT" ]; then
+                log "  No output for ${TMUX_IDLE_TIMEOUT}s, assuming done"
+                tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
+                sleep 5
+                tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+                break
+            fi
         fi
 
         # Hard timeout
-        ELAPSED=$(( $(date +%s) - TMUX_START ))
         if [ "$ELAPSED" -ge "$TMUX_HARD_TIMEOUT" ]; then
             log "  Hard timeout (${TMUX_HARD_TIMEOUT}s), killing session"
             tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
@@ -980,6 +995,8 @@ WRAPPER_EOF
 
         sleep 5
     done
+
+    kill $TAIL_PID 2>/dev/null || true
 
     CLAUDE_EXIT=0
     rm -f "$PROMPT_FILE" "$TMUX_WRAPPER"
