@@ -936,8 +936,9 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     cat > "$TMUX_WRAPPER" <<WRAPPER_EOF
 #!/bin/bash
 unset CLAUDECODE ANTHROPIC_API_KEY
-PROMPT=\$(cat "$PROMPT_FILE")
-script -q -F "$FUNC_STREAM_LOG" claude "\$PROMPT" \\
+# Start Claude interactively first so plugins/hooks initialize,
+# then send the prompt via stdin after a delay
+script -q -F "$FUNC_STREAM_LOG" claude \\
     --model "$MODEL" \\
     --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
@@ -949,6 +950,15 @@ WRAPPER_EOF
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
+
+    # Wait for Claude to initialize (plugins load, hooks fire)
+    log "  Waiting for Claude to initialize..."
+    sleep 15
+
+    # Send the prompt via tmux send-keys (paste from file)
+    tmux load-buffer -b decomp-prompt "$PROMPT_FILE"
+    tmux paste-buffer -b decomp-prompt -t "$TMUX_SESSION"
+    tmux send-keys -t "$TMUX_SESSION" Enter
 
     # No live tail — raw TUI output is too noisy to filter cleanly.
     # Monitor via: tmux attach -t $TMUX_SESSION
