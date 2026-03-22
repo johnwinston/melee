@@ -1104,11 +1104,17 @@ WRAPPER_EOF
     rm -f "$PROMPT_FILE" "$TMUX_WRAPPER"
     log "  tmux session ended"
 
-    # Merge useful observations from worktree project into main melee project
-    # so knowledge transfers between decomp sessions
+    # Merge new observations from worktree project back into melee project
     CLAUDE_MEM_DB="$HOME/.claude-mem/claude-mem.db"
     if [ -f "$CLAUDE_MEM_DB" ]; then
         WT_PROJECT="decomp-${BRANCH_NAME}"
+        # Delete seeded copies first (they have '-copy' suffix on content_hash)
+        sqlite3 "$CLAUDE_MEM_DB" "
+            DELETE FROM observations
+            WHERE project = '$WT_PROJECT'
+            AND content_hash LIKE '%-copy';
+        " 2>/dev/null || true
+        # Merge genuinely new discoveries back to melee
         MERGED=$(sqlite3 "$CLAUDE_MEM_DB" "
             UPDATE observations SET project = 'melee'
             WHERE project = '$WT_PROJECT'
@@ -1119,7 +1125,7 @@ WRAPPER_EOF
         sqlite3 "$CLAUDE_MEM_DB" "
             DELETE FROM observations WHERE project = '$WT_PROJECT';
         " 2>/dev/null || true
-        [ "$MERGED" -gt 0 ] && log "  [claude-mem] Merged $MERGED observations to melee project"
+        [ "$MERGED" -gt 0 ] && log "  [claude-mem] Merged $MERGED new observations to melee project"
     fi
 
     # Strip ANSI codes for readable log
