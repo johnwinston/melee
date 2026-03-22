@@ -936,8 +936,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     cat > "$TMUX_WRAPPER" <<WRAPPER_EOF
 #!/bin/bash
 unset CLAUDECODE ANTHROPIC_API_KEY
-PROMPT=\$(cat "$PROMPT_FILE")
-script -q -F "$FUNC_STREAM_LOG" claude "\$PROMPT" \\
+script -q -F "$FUNC_STREAM_LOG" claude \\
     --model "$MODEL" \\
     --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
@@ -949,6 +948,14 @@ WRAPPER_EOF
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
+
+    # Wait for Claude to fully initialize (plugins, hooks, system reminders)
+    log "  Waiting for Claude to initialize..."
+    sleep 20
+
+    # Send a short message via keystrokes telling Claude to read the prompt file
+    tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly."
+    tmux send-keys -t "$TMUX_SESSION" Enter
 
     TAIL_PID=""
 
