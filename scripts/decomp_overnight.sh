@@ -960,16 +960,14 @@ WRAPPER_EOF
     tmux paste-buffer -b decomp-prompt -t "$TMUX_SESSION"
     tmux send-keys -t "$TMUX_SESSION" Enter
 
-    # No live tail — raw TUI output is too noisy to filter cleanly.
-    # Monitor via: tmux attach -t $TMUX_SESSION
-    # Or read the log after completion with the strip command in CLAUDE.md.
     TAIL_PID=""
 
-    # Monitor for completion (RESULTS marker, idle timeout, or hard timeout)
-    # Min runtime prevents false matches on the RESULTS template in the prompt
+    # Monitor for completion with clean status output
     TMUX_MIN_RUNTIME=${TMUX_MIN_RUNTIME:-60}
     TMUX_START=$(date +%s)
     LAST_SIZE=0
+    LAST_TOOL_COUNT=0
+    LAST_MATCH_PCT=""
     IDLE_COUNT=0
 
     while tmux has-session -t "$TMUX_SESSION" 2>/dev/null; do
@@ -979,6 +977,24 @@ WRAPPER_EOF
         fi
 
         ELAPSED=$(( $(date +%s) - TMUX_START ))
+        CURRENT_SIZE=$(wc -c < "$FUNC_STREAM_LOG" 2>/dev/null || echo 0)
+
+        # Print clean status every 30s when log has grown
+        if [ "$CURRENT_SIZE" -ne "$LAST_SIZE" ] && [ $((ELAPSED % 30)) -lt 6 ] && [ "$ELAPSED" -ge 20 ]; then
+            # Count tool calls and extract latest match percentage
+            STRIPPED=$(perl -pe 's/\e\[\??[0-9;]*[a-zA-Z]//g; s/\e\][^\x07]*\x07//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f]//g' "$FUNC_STREAM_LOG" 2>/dev/null)
+            TOOL_COUNT=$(echo "$STRIPPED" | grep -coE '⏺(Bash|Read|Edit|Write|Search|Grep|Glob|Agent|Skill)' 2>/dev/null || echo 0)
+            MATCH_PCT=$(echo "$STRIPPED" | grep -oE '[0-9]+\.[0-9]+%' | tail -1)
+            TOKENS=$(echo "$STRIPPED" | grep -oE '[0-9]+tokens' | tail -1 | grep -oE '[0-9]+')
+
+            if [ "$TOOL_COUNT" -ne "$LAST_TOOL_COUNT" ]; then
+                STATUS="  ${ELAPSED}s elapsed, ${TOOL_COUNT} tool calls"
+                [ -n "$TOKENS" ] && STATUS="$STATUS, ${TOKENS} tokens"
+                [ -n "$MATCH_PCT" ] && STATUS="$STATUS, last match: ${MATCH_PCT}"
+                log "$STATUS"
+                LAST_TOOL_COUNT=$TOOL_COUNT
+            fi
+        fi
 
         # Only check for RESULTS after minimum runtime (prompt echoes the template)
         if [ "$ELAPSED" -ge "$TMUX_MIN_RUNTIME" ]; then
@@ -996,7 +1012,6 @@ WRAPPER_EOF
         # Idle timeout: no new output for TMUX_IDLE_TIMEOUT seconds
         # (only after min runtime to avoid killing during prompt loading)
         if [ "$ELAPSED" -ge "$TMUX_MIN_RUNTIME" ]; then
-            CURRENT_SIZE=$(wc -c < "$FUNC_STREAM_LOG" 2>/dev/null || echo 0)
             if [ "$CURRENT_SIZE" -eq "$LAST_SIZE" ]; then
                 IDLE_COUNT=$((IDLE_COUNT + 1))
             else
