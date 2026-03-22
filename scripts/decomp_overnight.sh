@@ -925,8 +925,8 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     PLUGIN_ARGS=""
     PLUGIN_CACHE="$HOME/.claude/plugins/cache"
     if [ -d "$PLUGIN_CACHE" ]; then
-        for plugin_dir in "$PLUGIN_CACHE"/*/*; do
-            if [ -d "$plugin_dir" ]; then
+        for plugin_dir in "$PLUGIN_CACHE"/*/*/*; do
+            if [ -d "$plugin_dir" ] && [ -f "$plugin_dir/package.json" ]; then
                 PLUGIN_ARGS="$PLUGIN_ARGS --plugin-dir $plugin_dir"
             fi
         done
