@@ -955,7 +955,7 @@ WRAPPER_EOF
 
     # Send the prompt via keystrokes — Claude starts in plan mode,
     # will use superpowers to brainstorm/plan, then exit plan mode to execute
-    tmux send-keys -t "$TMUX_SESSION" -l "Use the superpowers:brainstorming skill first, then enter plan mode and use the superpowers:writing-plans skill to create a plan from $PROMPT_FILE. When ready, exit plan mode and execute using the superpowers:executing-plans skill." || true
+    tmux send-keys -t "$TMUX_SESSION" -l "Read and follow the task in $PROMPT_FILE" || true
     sleep 1
     tmux send-keys -t "$TMUX_SESSION" Enter || true
     log "  Prompt sent to Claude"
@@ -993,6 +993,15 @@ WRAPPER_EOF
                 [ -n "$MATCH_PCT" ] && STATUS="$STATUS, last match: ${MATCH_PCT}"
                 log "$STATUS"
                 LAST_TOOL_COUNT=$TOOL_COUNT
+            fi
+        fi
+
+        # Auto-approve plan mode exit prompts ("Would you like to proceed?")
+        if [ "$ELAPSED" -ge "$TMUX_MIN_RUNTIME" ]; then
+            PANE_TEXT=$(tmux capture-pane -t "$TMUX_SESSION" -p 2>/dev/null || true)
+            if echo "$PANE_TEXT" | grep -q "Would you like to proceed"; then
+                log "  Plan ready, auto-approving execution..."
+                tmux send-keys -t "$TMUX_SESSION" Enter 2>/dev/null || true
             fi
         fi
 
@@ -1254,8 +1263,12 @@ EOF
         TOTAL_FAILURES=$((TOTAL_FAILURES + BATCH_FAILURES))
         draft_pr_update
     else
-        BEST=$(echo "$RESULT_LINE" | sed -n 's/.*best=//p' || echo "?")
-        log "  ✗ FAILED (best: ${BEST}%)"
+        BEST=$(echo "$RESULT_LINE" | sed -n 's/.*best=//p' || true)
+        if [ -n "$BEST" ]; then
+            log "  ✗ FAILED (best: ${BEST}%)"
+        else
+            log "  ✗ FAILED (no results — session timed out or crashed)"
+        fi
         # Clean up worktree and branch
         cleanup_worktree "$BRANCH_NAME"
         git branch -D "$BRANCH_NAME" 2>/dev/null || true
