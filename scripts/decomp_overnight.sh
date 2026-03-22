@@ -808,6 +808,10 @@ When prompted to choose between options (e.g. by skills or plan mode), always ch
 recommended option. If no option is marked as recommended, use your best judgment and proceed
 immediately — never wait for human input.
 
+IMPORTANT: Before starting work, use the superpowers:brainstorming skill to analyze the task,
+then use the superpowers:writing-plans skill to create an implementation plan. Execute the plan
+using the superpowers:executing-plans skill. These skills are available via the Skill tool.
+
 TARGETS (decompile ALL of these):
 $ALL_NAMES_LIST
 FILE: $FUNC_FILE
