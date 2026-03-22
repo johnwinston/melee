@@ -946,10 +946,13 @@ WRAPPER_EOF
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
 
-    # Tail the log for live output (like stream-monitor does for headless mode)
+    # Tail the log for live output — strip TUI artifacts from Claude's terminal
     tail -f "$FUNC_STREAM_LOG" 2>/dev/null \
-        | sed -u $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
+        | perl -pe 's/\e\[\??[0-9;]*[a-zA-Z]//g; s/\e\][^\x07]*\x07//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f]//g' \
         | grep --line-buffered -vE '^\s*$' \
+        | grep --line-buffered -vE '^\s*[✢✳✶✻✽·⠂⠐↓]' \
+        | grep --line-buffered -vE '^(thinking with|[0-9]+s\s+·\s+)' \
+        | grep --line-buffered -vE '^─+$' \
         | sed -u 's/^/  [tmux] /' &
     TAIL_PID=$!
 
