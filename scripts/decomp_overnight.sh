@@ -183,6 +183,12 @@ PERMUTER_PATH=${PERMUTER_PATH:-$HOME/dev/decomp-permuter}
 PERMUTER_JOBS=${PERMUTER_JOBS:-4}
 PERMUTER_TIMEOUT=${PERMUTER_TIMEOUT:-300}
 
+# Tmux mode: spawn interactive Claude Code sessions (with skills/plugins)
+# Set USE_TMUX=true to enable. Attach with: tmux attach -t decomp-*
+USE_TMUX=${USE_TMUX:-false}
+TMUX_IDLE_TIMEOUT=${TMUX_IDLE_TIMEOUT:-120}    # seconds of no output -> assume done
+TMUX_HARD_TIMEOUT=${TMUX_HARD_TIMEOUT:-3600}   # max seconds per session
+
 log() {
     echo "[$(date '+%H:%M:%S')] $*" | tee -a "$MAIN_LOG"
 }
@@ -280,6 +286,52 @@ progress_already_tried() {
     [ -f "$PROGRESS_FILE" ] && python3 "$HELPERS" progress-check "$PROGRESS_FILE" "$1" 2>/dev/null
 }
 
+# Parse results from plain text tmux output (strips ANSI codes).
+# Output format matches parse-result: status=, context=, func_*= lines.
+parse_text_result() {
+    local log_file="$1"
+    if [ ! -f "$log_file" ]; then
+        echo "status=error"
+        return
+    fi
+    local clean
+    clean=$(sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' "$log_file")
+
+    local context_line
+    context_line=$(echo "$clean" | grep "^CONTEXT:" | tail -1 || true)
+    if [ -n "$context_line" ]; then
+        echo "context=${context_line#CONTEXT: }"
+    fi
+
+    local results_line
+    results_line=$(echo "$clean" | grep "^RESULTS:" | tail -1 || true)
+    if [ -z "$results_line" ]; then
+        echo "status=error"
+        return
+    fi
+
+    # Overall status: success if any function succeeded
+    if echo "$results_line" | grep -q "SUCCESS"; then
+        echo "status=success"
+    else
+        local best
+        best=$(echo "$results_line" | grep -oE 'best=[0-9.]+' | head -1 | sed 's/best=//' || echo "?")
+        echo "status=failure best=$best"
+    fi
+
+    # Per-function results: func1=SUCCESS func2=FAILURE(best=XX%)
+    echo "$results_line" | grep -oE '[A-Za-z_][A-Za-z_0-9]*=(SUCCESS|FAILURE)' | while read -r part; do
+        local fname fstatus
+        fname=$(echo "$part" | sed 's/=.*//')
+        fstatus=$(echo "$part" | sed 's/.*=//')
+        if [ "$fstatus" = "SUCCESS" ]; then
+            echo "func_${fname}=success"
+        else
+            echo "func_${fname}=failure"
+        fi
+    done
+}
+
 cleanup_worktree() {
     local branch_name="$1"
     local wt_path
@@ -319,9 +371,17 @@ else
     SOURCE_FILES=(src/melee/ft/chara/ftCommon/ftCo_Attack100.c)
 fi
 
+if [ "$USE_TMUX" = "true" ] && ! command -v tmux >/dev/null 2>&1; then
+    echo "ERROR: USE_TMUX=true but tmux is not installed"
+    exit 1
+fi
+
 log "=== Overnight Decomp Runner ==="
 log "Scanning ${#SOURCE_FILES[@]} files"
 log "Model: $MODEL"
+if [ "$USE_TMUX" = "true" ]; then
+    log "Tmux mode: ON (attach with: tmux attach -t decomp-*)"
+fi
 if [ "$CONTINUOUS" = "true" ]; then
     log "Continuous mode: ON (cutoff: $(date -r "$CUTOFF_EPOCH" '+%H:%M' 2>/dev/null || date -d "@$CUTOFF_EPOCH" '+%H:%M' 2>/dev/null || echo "$CUTOFF_HOUR:00"))"
 fi
@@ -841,6 +901,98 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 
     check_usage
 
+    if [ "$USE_TMUX" = "true" ]; then
+
+    # === TMUX MODE: Interactive Claude Code session with skills/plugins ===
+    FUNC_STREAM_LOG="$LOG_DIR/${FIRST_NAME}_${TIMESTAMP}_tmux.log"
+    : > "$FUNC_STREAM_LOG"
+    RATE_LIMITED=false
+
+    TMUX_SESSION="decomp-$(echo "$FIRST_NAME" | tr -cd '[:alnum:]-' | head -c 30)"
+    tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+
+    PROMPT_FILE=$(mktemp /tmp/decomp_prompt.XXXXXX.txt)
+    printf '%s' "$PROMPT" > "$PROMPT_FILE"
+
+    TMUX_WRAPPER=$(mktemp /tmp/decomp_wrapper.XXXXXX.sh)
+    cat > "$TMUX_WRAPPER" <<WRAPPER_EOF
+#!/bin/bash
+unset CLAUDECODE ANTHROPIC_API_KEY
+PROMPT=\$(cat "$PROMPT_FILE")
+claude "\$PROMPT" \\
+    --model "$MODEL" \\
+    --permission-mode bypassPermissions \\
+    -w "$BRANCH_NAME" \\
+    --verbose
+WRAPPER_EOF
+    chmod +x "$TMUX_WRAPPER"
+
+    log "  Starting tmux session: $TMUX_SESSION"
+    log "  Attach with: tmux attach -t $TMUX_SESSION"
+    tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
+    tmux pipe-pane -t "$TMUX_SESSION" -o "cat >> '$FUNC_STREAM_LOG'"
+
+    # Monitor for completion (RESULTS marker, idle timeout, or hard timeout)
+    TMUX_START=$(date +%s)
+    LAST_SIZE=0
+    IDLE_COUNT=0
+
+    while tmux has-session -t "$TMUX_SESSION" 2>/dev/null; do
+        if [ "$STOP_REQUESTED" = "true" ]; then
+            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+            break
+        fi
+
+        # Check for RESULTS marker (strip ANSI codes)
+        if sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
+                "$FUNC_STREAM_LOG" 2>/dev/null | grep -q "RESULTS:"; then
+            log "  Results detected, giving Claude 15s to finish..."
+            sleep 15
+            tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
+            sleep 5
+            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+            break
+        fi
+
+        # Idle timeout: no new output for TMUX_IDLE_TIMEOUT seconds
+        CURRENT_SIZE=$(wc -c < "$FUNC_STREAM_LOG" 2>/dev/null || echo 0)
+        if [ "$CURRENT_SIZE" -eq "$LAST_SIZE" ]; then
+            IDLE_COUNT=$((IDLE_COUNT + 1))
+        else
+            IDLE_COUNT=0
+            LAST_SIZE=$CURRENT_SIZE
+        fi
+        if [ $((IDLE_COUNT * 5)) -ge "$TMUX_IDLE_TIMEOUT" ]; then
+            log "  No output for ${TMUX_IDLE_TIMEOUT}s, assuming done"
+            tmux send-keys -t "$TMUX_SESSION" "/exit" Enter 2>/dev/null || true
+            sleep 5
+            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+            break
+        fi
+
+        # Hard timeout
+        ELAPSED=$(( $(date +%s) - TMUX_START ))
+        if [ "$ELAPSED" -ge "$TMUX_HARD_TIMEOUT" ]; then
+            log "  Hard timeout (${TMUX_HARD_TIMEOUT}s), killing session"
+            tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
+            break
+        fi
+
+        sleep 5
+    done
+
+    CLAUDE_EXIT=0
+    rm -f "$PROMPT_FILE" "$TMUX_WRAPPER"
+    log "  tmux session ended"
+
+    # Strip ANSI codes for readable log
+    sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' \
+        "$FUNC_STREAM_LOG" > "$FUNC_LOG" 2>/dev/null || cp "$FUNC_STREAM_LOG" "$FUNC_LOG"
+    log "  [tokens] (not available in tmux mode)"
+
+    else
+
+    # === HEADLESS MODE: claude -p with stream-json ===
     log "  Spawning Claude session..."
     FUNC_STREAM_LOG="$LOG_DIR/${FIRST_NAME}_${TIMESTAMP}_stream.jsonl"
 
@@ -928,6 +1080,8 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     FUNC_TOKENS=$(python3 "$HELPERS" token-usage "$FUNC_STREAM_LOG" 2>/dev/null || echo "tokens=unknown")
     log "  [tokens] $FUNC_TOKENS"
 
+    fi # end USE_TMUX
+
     # Ctrl+C during Claude session: clean up and exit gracefully
     if [ "$STOP_REQUESTED" = "true" ]; then
         log "  Interrupted by user, cleaning up..."
@@ -953,8 +1107,12 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         continue
     fi
 
-    # Parse result from stream JSON result event
-    RESULT_LINE=$(python3 "$HELPERS" parse-result "$FUNC_STREAM_LOG" 2>/dev/null || echo "status=error")
+    # Parse result
+    if [ "$USE_TMUX" = "true" ]; then
+        RESULT_LINE=$(parse_text_result "$FUNC_STREAM_LOG")
+    else
+        RESULT_LINE=$(python3 "$HELPERS" parse-result "$FUNC_STREAM_LOG" 2>/dev/null || echo "status=error")
+    fi
     RESULT_STATUS=$(echo "$RESULT_LINE" | sed -n 's/^status=//p' | head -1)
     RESULT_CONTEXT=$(echo "$RESULT_LINE" | sed -n 's/^context=//p' | head -1)
 
