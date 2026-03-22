@@ -382,12 +382,13 @@ cleanup_stale_worktrees() {
         fi
         wt_branch=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ "$wt_branch" == decomp-* ]] || [[ "$wt_branch" == worktree-decomp-* ]]; then
-            ahead=$(git rev-list --count master.."$wt_branch" 2>/dev/null || echo 0)
-            if [ "$ahead" -eq 0 ]; then
-                log "  Removing stale worktree: $wt ($wt_branch)"
+            # Check for src/ commits not yet in upstream (the actual decomp work)
+            src_ahead=$(git log --format="%H" upstream/master.."$wt_branch" -- src/ 2>/dev/null | wc -l | tr -d ' ' || echo 0)
+            if [ "$src_ahead" -eq 0 ]; then
+                log "  Removing stale worktree: $wt ($wt_branch, no new src/ work)"
                 git worktree remove "$wt" --force 2>/dev/null || true
             else
-                log "  Keeping worktree with commits: $wt ($wt_branch, $ahead ahead)"
+                log "  Keeping worktree with src/ commits: $wt ($wt_branch, $src_ahead src/ commits)"
             fi
         fi
     done
