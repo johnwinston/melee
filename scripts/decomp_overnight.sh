@@ -948,16 +948,21 @@ WRAPPER_EOF
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
+    log "  DEBUG: tmux session started, rc=$?"
 
     # Wait for Claude to fully initialize (plugins, hooks, system reminders)
     log "  Waiting for Claude to initialize..."
     sleep 20 || true
+    log "  DEBUG: sleep done"
 
     # Send the prompt via keystrokes — Claude starts in plan mode,
     # will use superpowers to brainstorm/plan, then exit plan mode to execute
+    log "  DEBUG: sending keys..."
     tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly. When your plan is ready, exit plan mode and execute it autonomously." || true
+    log "  DEBUG: keys sent, sending Enter..."
     sleep 1
     tmux send-keys -t "$TMUX_SESSION" Enter || true
+    log "  DEBUG: Enter sent, entering monitor loop"
 
     TAIL_PID=""
 
