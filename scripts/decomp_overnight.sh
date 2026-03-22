@@ -950,15 +950,10 @@ WRAPPER_EOF
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
 
-    # Tail the log for live output — strip TUI artifacts from Claude's terminal
-    tail -f "$FUNC_STREAM_LOG" 2>/dev/null \
-        | perl -pe 's/\e\[\??[0-9;]*[a-zA-Z]//g; s/\e\][^\x07]*\x07//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f]//g' \
-        | grep --line-buffered -vE '^\s*$' \
-        | grep --line-buffered -vE '^\s*[✢✳✶✻✽·⠂⠐↓]' \
-        | grep --line-buffered -vE '^(thinking with|[0-9]+s\s+·\s+)' \
-        | grep --line-buffered -vE '^─+$' \
-        | sed -u 's/^/  [tmux] /' &
-    TAIL_PID=$!
+    # No live tail — raw TUI output is too noisy to filter cleanly.
+    # Monitor via: tmux attach -t $TMUX_SESSION
+    # Or read the log after completion with the strip command in CLAUDE.md.
+    TAIL_PID=""
 
     # Monitor for completion (RESULTS marker, idle timeout, or hard timeout)
     # Min runtime prevents false matches on the RESULTS template in the prompt
@@ -1017,7 +1012,7 @@ WRAPPER_EOF
         sleep 5
     done
 
-    kill $TAIL_PID 2>/dev/null || true
+    [ -n "$TAIL_PID" ] && kill $TAIL_PID 2>/dev/null || true
 
     CLAUDE_EXIT=0
     rm -f "$PROMPT_FILE" "$TMUX_WRAPPER"
