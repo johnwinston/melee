@@ -933,7 +933,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 #!/bin/bash
 unset CLAUDECODE ANTHROPIC_API_KEY
 PROMPT=\$(cat "$PROMPT_FILE")
-claude "\$PROMPT" \\
+script -q "$FUNC_STREAM_LOG" claude "\$PROMPT" \\
     --model "$MODEL" \\
     --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
@@ -945,7 +945,6 @@ WRAPPER_EOF
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
-    tmux pipe-pane -t "$TMUX_SESSION" -o "cat >> '$FUNC_STREAM_LOG'"
 
     # Tail the log for live output (like stream-monitor does for headless mode)
     tail -f "$FUNC_STREAM_LOG" 2>/dev/null \
