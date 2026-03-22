@@ -494,7 +494,7 @@ recover_interrupted_work() {
         fi
 
         log "  Recovering $branch ($new_count new src/ commit(s))..."
-        cherry_pick_to_draft "$branch"
+        cherry_pick_to_draft "$branch" || log "  (cherry-pick to draft failed, keeping branch)"
 
         # Extract function names from commit messages and update status
         # Match both "Decomp funcName" and "decompile funcName" patterns
