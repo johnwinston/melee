@@ -804,6 +804,9 @@ for f in json.load(sys.stdin):
 
     PROMPT="You are autonomously decompiling functions for the Melee decompilation project.
 You must work completely autonomously — no human will intervene.
+When prompted to choose between options (e.g. by skills or plan mode), always choose the
+recommended option. If no option is marked as recommended, use your best judgment and proceed
+immediately — never wait for human input.
 
 TARGETS (decompile ALL of these):
 $ALL_NAMES_LIST
@@ -914,6 +917,17 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     PROMPT_FILE=$(mktemp /tmp/decomp_prompt.XXXXXX.txt)
     printf '%s' "$PROMPT" > "$PROMPT_FILE"
 
+    # Discover installed plugins to forward into tmux sessions
+    PLUGIN_ARGS=""
+    PLUGIN_CACHE="$HOME/.claude/plugins/cache"
+    if [ -d "$PLUGIN_CACHE" ]; then
+        for plugin_dir in "$PLUGIN_CACHE"/*/*; do
+            if [ -d "$plugin_dir" ]; then
+                PLUGIN_ARGS="$PLUGIN_ARGS --plugin-dir $plugin_dir"
+            fi
+        done
+    fi
+
     TMUX_WRAPPER=$(mktemp /tmp/decomp_wrapper.XXXXXX.sh)
     cat > "$TMUX_WRAPPER" <<WRAPPER_EOF
 #!/bin/bash
@@ -923,7 +937,8 @@ claude "\$PROMPT" \\
     --model "$MODEL" \\
     --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
-    --verbose
+    --verbose${PLUGIN_ARGS:+ \\
+    $PLUGIN_ARGS}
 WRAPPER_EOF
     chmod +x "$TMUX_WRAPPER"
 
