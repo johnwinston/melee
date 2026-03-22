@@ -933,7 +933,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 #!/bin/bash
 unset CLAUDECODE ANTHROPIC_API_KEY
 PROMPT=\$(cat "$PROMPT_FILE")
-script -q "$FUNC_STREAM_LOG" claude "\$PROMPT" \\
+script -q -F "$FUNC_STREAM_LOG" claude "\$PROMPT" \\
     --model "$MODEL" \\
     --permission-mode bypassPermissions \\
     -w "$BRANCH_NAME" \\
