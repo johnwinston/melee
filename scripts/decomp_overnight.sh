@@ -914,7 +914,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
     TMUX_SESSION="decomp-$(echo "$FIRST_NAME" | tr -cd '[:alnum:]-' | head -c 30)"
     tmux kill-session -t "$TMUX_SESSION" 2>/dev/null || true
 
-    PROMPT_FILE=$(mktemp /tmp/decomp_prompt.XXXXXX.txt)
+    PROMPT_FILE=$(mktemp /tmp/decomp_prompt.XXXXXX)
     printf '%s' "$PROMPT" > "$PROMPT_FILE"
 
     # Discover installed plugins to forward into tmux sessions
@@ -928,7 +928,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
         done
     fi
 
-    TMUX_WRAPPER=$(mktemp /tmp/decomp_wrapper.XXXXXX.sh)
+    TMUX_WRAPPER=$(mktemp /tmp/decomp_wrapper.XXXXXX)
     cat > "$TMUX_WRAPPER" <<WRAPPER_EOF
 #!/bin/bash
 unset CLAUDECODE ANTHROPIC_API_KEY
