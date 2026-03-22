@@ -993,7 +993,7 @@ WRAPPER_EOF
 
     # Send the prompt via keystrokes — Claude starts in plan mode,
     # will use superpowers to brainstorm/plan, then exit plan mode to execute
-    tmux send-keys -t "$TMUX_SESSION" -l "Read and follow the task in $PROMPT_FILE" || true
+    tmux send-keys -t "$TMUX_SESSION" -l "MANDATORY FIRST STEP: Invoke the Skill tool with skill='superpowers:brainstorming' BEFORE doing anything else. This is not optional. After brainstorming, enter plan mode with EnterPlanMode, then read $PROMPT_FILE and write your plan. Exit plan mode and execute. Do NOT skip these steps." || true
     sleep 1
     tmux send-keys -t "$TMUX_SESSION" Enter || true
     log "  Prompt sent to Claude"
