@@ -948,21 +948,17 @@ WRAPPER_EOF
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
     tmux new-session -d -s "$TMUX_SESSION" -x 200 -y 50 "$TMUX_WRAPPER"
-    log "  DEBUG: tmux session started, rc=$?"
 
     # Wait for Claude to fully initialize (plugins, hooks, system reminders)
     log "  Waiting for Claude to initialize..."
     sleep 20 || true
-    log "  DEBUG: sleep done"
 
     # Send the prompt via keystrokes — Claude starts in plan mode,
     # will use superpowers to brainstorm/plan, then exit plan mode to execute
-    log "  DEBUG: sending keys..."
     tmux send-keys -t "$TMUX_SESSION" -l "Read $PROMPT_FILE and execute the task described in it. Follow all instructions exactly. When your plan is ready, exit plan mode and execute it autonomously." || true
-    log "  DEBUG: keys sent, sending Enter..."
     sleep 1
     tmux send-keys -t "$TMUX_SESSION" Enter || true
-    log "  DEBUG: Enter sent, entering monitor loop"
+    log "  Prompt sent to Claude"
 
     TAIL_PID=""
 
@@ -988,8 +984,8 @@ WRAPPER_EOF
             # Count tool calls and extract latest match percentage
             STRIPPED=$(perl -pe 's/\e\[\??[0-9;]*[a-zA-Z]//g; s/\e\][^\x07]*\x07//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f]//g' "$FUNC_STREAM_LOG" 2>/dev/null)
             TOOL_COUNT=$(echo "$STRIPPED" | grep -coE '⏺(Bash|Read|Edit|Write|Search|Grep|Glob|Agent|Skill)' 2>/dev/null || echo 0)
-            MATCH_PCT=$(echo "$STRIPPED" | grep -oE '[0-9]+\.[0-9]+%' | tail -1)
-            TOKENS=$(echo "$STRIPPED" | grep -oE '[0-9]+tokens' | tail -1 | grep -oE '[0-9]+')
+            MATCH_PCT=$(echo "$STRIPPED" | grep -oE '[0-9]+\.[0-9]+%' 2>/dev/null | tail -1 || true)
+            TOKENS=$(echo "$STRIPPED" | grep -oE '[0-9]+tokens' 2>/dev/null | tail -1 | grep -oE '[0-9]+' || true)
 
             if [ "$TOOL_COUNT" -ne "$LAST_TOOL_COUNT" ]; then
                 STATUS="  ${ELAPSED}s elapsed, ${TOOL_COUNT} tool calls"
