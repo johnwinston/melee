@@ -290,12 +290,45 @@ progress_already_tried() {
 # Output format matches parse-result: status=, context=, func_*= lines.
 parse_text_result() {
     local log_file="$1"
+
+    # Prefer the clean result file written by Claude (no TUI artifacts)
+    local result_file="/tmp/decomp_result.txt"
+    if [ -f "$result_file" ]; then
+        local clean
+        clean=$(cat "$result_file")
+        rm -f "$result_file"
+
+        local context_line
+        context_line=$(echo "$clean" | grep "^CONTEXT:" | tail -1 || true)
+        [ -n "$context_line" ] && echo "context=${context_line#CONTEXT: }"
+
+        local results_line
+        results_line=$(echo "$clean" | grep "^RESULTS:" | tail -1 || true)
+        if [ -n "$results_line" ]; then
+            if echo "$results_line" | grep -q "SUCCESS"; then
+                echo "status=success"
+            else
+                local best
+                best=$(echo "$results_line" | grep -oE 'best=[0-9.]+' | head -1 | sed 's/best=//' || true)
+                echo "status=failure best=${best:-?}"
+            fi
+            echo "$results_line" | grep -oE '[A-Za-z_][A-Za-z_0-9]*=(SUCCESS|FAILURE)' | while read -r part; do
+                local fname fstatus
+                fname=$(echo "$part" | sed 's/=.*//')
+                fstatus=$(echo "$part" | sed 's/.*=//')
+                [ "$fstatus" = "SUCCESS" ] && echo "func_${fname}=success" || echo "func_${fname}=failure"
+            done
+            return
+        fi
+    fi
+
+    # Fallback: parse from TUI log (lossy — words may be concatenated)
     if [ ! -f "$log_file" ]; then
         echo "status=error"
         return
     fi
     local clean
-    clean=$(sed $'s/\x1b\\[[0-9;]*[a-zA-Z]//g; s/\x1b\\[[0-9;]*[mK]//g' "$log_file")
+    clean=$(perl -pe 's/\e\[\??[0-9;]*[a-zA-Z]//g; s/\e\][^\x07]*\x07//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f]//g; s/\x1b.//g' "$log_file")
 
     local context_line
     context_line=$(echo "$clean" | grep "^CONTEXT:" | tail -1 || true)
@@ -895,7 +928,11 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\"
 8. FOR FUNCTIONS NOT AT 100%: Revert their changes:
    git checkout -- .
 
-9. OUTPUT the following at the end of your response:
+9. OUTPUT: Write results to a file AND print them (the file is the reliable source):
+   echo 'CONTEXT: ...' > /tmp/decomp_result.txt
+   echo 'RESULTS: ...' >> /tmp/decomp_result.txt
+   cat /tmp/decomp_result.txt
+
    a. A CONTEXT line with 1-2 sentences describing what these functions do IN THE GAME.
       Describe the player-visible behavior — the move, the stage hazard, the menu interaction.
       Do NOT describe the C code, structs, registers, compiler tricks, or decompilation process.
