@@ -983,19 +983,7 @@ script -q -F "$FUNC_STREAM_LOG" claude \\
 WRAPPER_EOF
     chmod +x "$TMUX_WRAPPER"
 
-    # Seed claude-mem: copy melee observations into the worktree project name
-    # so this session can access knowledge from previous decomp sessions
-    CLAUDE_MEM_DB="$HOME/.claude-mem/claude-mem.db"
     WT_PROJECT="decomp-${BRANCH_NAME}"
-    if [ -f "$CLAUDE_MEM_DB" ]; then
-        sqlite3 "$CLAUDE_MEM_DB" "
-            INSERT INTO observations (memory_session_id, project, text, type, title, subtitle, facts, narrative, concepts, files_read, files_modified, prompt_number, discovery_tokens, created_at, created_at_epoch, content_hash)
-            SELECT memory_session_id, '$WT_PROJECT', text, type, title, subtitle, facts, narrative, concepts, files_read, files_modified, prompt_number, discovery_tokens, created_at, created_at_epoch, content_hash || '-copy'
-            FROM observations
-            WHERE project = 'melee' AND type IN ('discovery', 'feature', 'decision')
-            AND content_hash NOT IN (SELECT content_hash FROM observations WHERE project = '$WT_PROJECT');
-        " 2>/dev/null || true
-    fi
 
     log "  Starting tmux session: $TMUX_SESSION"
     log "  Attach with: tmux attach -t $TMUX_SESSION"
@@ -1104,28 +1092,53 @@ WRAPPER_EOF
     rm -f "$PROMPT_FILE" "$TMUX_WRAPPER"
     log "  tmux session ended"
 
-    # Merge new observations from worktree project back into melee project
+    # LLM-review worktree observations: keep only useful decomp knowledge
     CLAUDE_MEM_DB="$HOME/.claude-mem/claude-mem.db"
     if [ -f "$CLAUDE_MEM_DB" ]; then
-        WT_PROJECT="decomp-${BRANCH_NAME}"
-        # Delete seeded copies first (they have '-copy' suffix on content_hash)
-        sqlite3 "$CLAUDE_MEM_DB" "
-            DELETE FROM observations
-            WHERE project = '$WT_PROJECT'
-            AND content_hash LIKE '%-copy';
-        " 2>/dev/null || true
-        # Merge genuinely new discoveries back to melee
-        MERGED=$(sqlite3 "$CLAUDE_MEM_DB" "
-            UPDATE observations SET project = 'melee'
-            WHERE project = '$WT_PROJECT'
-            AND type IN ('discovery', 'feature', 'decision');
-            SELECT changes();
-        " 2>/dev/null || echo 0)
-        # Clean up remaining worktree observations (change/bugfix/refactor noise)
-        sqlite3 "$CLAUDE_MEM_DB" "
-            DELETE FROM observations WHERE project = '$WT_PROJECT';
-        " 2>/dev/null || true
-        [ "$MERGED" -gt 0 ] && log "  [claude-mem] Merged $MERGED new observations to melee project"
+        OBS_COUNT=$(sqlite3 "$CLAUDE_MEM_DB" "SELECT COUNT(*) FROM observations WHERE project = '$WT_PROJECT';" 2>/dev/null || echo 0)
+        if [ "$OBS_COUNT" -gt 0 ]; then
+            OBS_JSON=$(sqlite3 -json "$CLAUDE_MEM_DB" "
+                SELECT id, title, type, files_modified FROM observations WHERE project = '$WT_PROJECT';
+            " 2>/dev/null)
+            REVIEW_PROMPT="You are reviewing observations from a Melee decompilation session for the function ${FUNC_NAME}.
+These observations were recorded by an AI assistant during the session. Most are noise.
+
+KEEP observations about:
+- Struct/type layouts, field offsets, type definitions discovered
+- Match strategies (PAD_STACK, register tricks, compiler quirks)
+- Function signatures and calling conventions discovered
+- Patterns reusable across future decompilations
+
+DISCARD observations about:
+- Build/infrastructure issues (wine, wibo, ninja, configure)
+- Commit confirmations, git operations
+- Plan creation/update notices
+- Meta-observations about tooling or workflow
+- Observations about files outside src/melee/
+
+Return ONLY a JSON array of integer IDs to keep. If none are worth keeping, return [].
+Example: [742, 745]
+
+Observations:
+${OBS_JSON}"
+            KEEP_IDS=$(echo "$REVIEW_PROMPT" | claude -p --model haiku 2>/dev/null | grep -o '\[.*\]' | head -1)
+            if [ -n "$KEEP_IDS" ] && [ "$KEEP_IDS" != "[]" ]; then
+                # Convert JSON array [1,2,3] to SQL IN list (1,2,3)
+                SQL_IDS=$(echo "$KEEP_IDS" | tr -d '[]' | tr -s ' ')
+                MERGED=$(sqlite3 "$CLAUDE_MEM_DB" "
+                    UPDATE observations SET project = 'melee'
+                    WHERE project = '$WT_PROJECT' AND id IN ($SQL_IDS);
+                    SELECT changes();
+                " 2>/dev/null || echo 0)
+                [ "$MERGED" -gt 0 ] && log "  [claude-mem] Kept $MERGED/$OBS_COUNT observations (LLM-reviewed)"
+            else
+                log "  [claude-mem] Discarded all $OBS_COUNT observations (LLM-reviewed)"
+            fi
+            # Delete remaining worktree observations
+            sqlite3 "$CLAUDE_MEM_DB" "
+                DELETE FROM observations WHERE project = '$WT_PROJECT';
+            " 2>/dev/null || true
+        fi
     fi
 
     # Strip ANSI codes for readable log
