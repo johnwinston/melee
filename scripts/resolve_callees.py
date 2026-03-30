@@ -36,6 +36,21 @@ _DECL_START = re.compile(
 )
 
 
+def extract_decl_name(decl):
+    """Return the declared function name for a C prototype string."""
+    depth = 0
+    for i, ch in enumerate(decl):
+        if ch == "(" and depth == 0:
+            prefix = decl[:i].rstrip()
+            m = re.search(r"([A-Za-z_]\w*)$", prefix)
+            return m.group(1) if m else None
+        if ch == "(":
+            depth += 1
+        elif ch == ")" and depth > 0:
+            depth -= 1
+    return None
+
+
 def build_header_index():
     """Read all .h files under src/ and index declarations by function name.
 
@@ -49,7 +64,7 @@ def build_header_index():
         try:
             rel = str(hfile.relative_to(REPO_ROOT))
             is_static = ".static.h" in hfile.name
-            lines = hfile.read_text().splitlines()
+            lines = hfile.read_text(encoding="utf-8", errors="replace").splitlines()
             nlines = len(lines)
 
             i = 0
@@ -92,43 +107,37 @@ def build_header_index():
                 if not _DECL_START.match(decl):
                     continue
 
-                # Extract function name: word immediately before '('
-                for m in re.finditer(r"\b(\w+)\s*\(", decl):
-                    fname = m.group(1)
-                    if fname in _KEYWORDS:
-                        continue
-                    # Clean up the signature
-                    sig = decl.strip()
-                    sig = re.sub(r"^/\*.*?\*/\s*", "", sig)
-                    sig = re.sub(
-                        r"^(extern|static|inline)\s+", "", sig
-                    )
-                    # Normalize whitespace
-                    sig = re.sub(r"\s+", " ", sig)
+                fname = extract_decl_name(decl)
+                if fname is None or fname in _KEYWORDS:
+                    continue
 
-                    existing = index.get(fname)
-                    if existing is None:
+                # Clean up the signature
+                sig = decl.strip()
+                sig = re.sub(r"^/\*.*?\*/\s*", "", sig)
+                sig = re.sub(
+                    r"^(extern|static|inline)\s+", "", sig
+                )
+                # Normalize whitespace
+                sig = re.sub(r"\s+", " ", sig)
+
+                existing = index.get(fname)
+                if existing is None:
+                    index[fname] = (sig, f"{rel}:{decl_lineno}")
+                elif is_static:
+                    # Don't overwrite a regular .h with a .static.h
+                    pass
+                else:
+                    # Overwrite .static.h entry with regular .h
+                    old_loc = existing[1]
+                    if ".static.h" in old_loc:
                         index[fname] = (sig, f"{rel}:{decl_lineno}")
-                    elif is_static:
-                        # Don't overwrite a regular .h with a .static.h
-                        pass
-                    else:
-                        # Overwrite .static.h entry with regular .h
-                        old_loc = existing[1]
-                        if ".static.h" in old_loc:
-                            index[fname] = (sig, f"{rel}:{decl_lineno}")
         except (OSError, UnicodeDecodeError):
             continue
     return index
 
 
-def extract_function_asm(asm_path, func_name):
-    """Extract a single function's assembly from a .s file."""
-    try:
-        text = Path(asm_path).read_text()
-    except FileNotFoundError:
-        return ""
-
+def extract_function_asm_from_text(text, func_name):
+    """Extract a single function's assembly from .s source text."""
     # .fn/.endfn format
     pattern = (
         rf"\.fn {re.escape(func_name)}.*?"
@@ -151,7 +160,7 @@ def find_bl_targets(func_asm):
     """Extract unique bl target names from assembly text."""
     targets = []
     seen = set()
-    for m in re.finditer(r"\tbl\s+(\w+)", func_asm):
+    for m in re.finditer(r"^\s*bl\s+([A-Za-z_]\w*)\b", func_asm, re.MULTILINE):
         name = m.group(1)
         if name not in seen:
             seen.add(name)
@@ -161,11 +170,17 @@ def find_bl_targets(func_asm):
 
 def resolve_callees(asm_path, func_names):
     """Main entry: resolve callees for one or more functions."""
+    try:
+        asm_text = Path(asm_path).read_text(encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        print(f"(asm file not found: {asm_path})", file=sys.stderr)
+        return
+
     all_targets = []
     seen = set()
 
     for func_name in func_names:
-        func_asm = extract_function_asm(asm_path, func_name)
+        func_asm = extract_function_asm_from_text(asm_text, func_name)
         if not func_asm:
             print(
                 f"(function {func_name} not found in asm)",

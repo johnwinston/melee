@@ -37,6 +37,29 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 
+def load_json_file(path, default):
+    """Load JSON from a file, returning default on missing/corrupt input."""
+    try:
+        with open(path) as f:
+            value = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return default
+    return value
+
+
+def normalize_name(value):
+    """Normalize function names for case-insensitive comparisons."""
+    return str(value).strip().lower()
+
+
+def parse_int(value, default=0):
+    """Parse an int-like value, returning default on bad input."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def cmd_ninja_progress():
     """Read ninja output from stdin, display progress bar."""
     signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
@@ -45,6 +68,8 @@ def cmd_ninja_progress():
         m = re.match(r"\[(\d+)/(\d+)\]", line)
         if m:
             cur, total = int(m.group(1)), int(m.group(2))
+            if total <= 0:
+                continue
             pct = cur * 100 // total
             filled = pct * 30 // 100
             bar = "\u2588" * filled + "\u2591" * (30 - filled)
@@ -59,12 +84,21 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
     """
     signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
     signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-    pid = int(pid_str)
+    try:
+        pid = int(pid_str)
+    except ValueError:
+        print("invalid pid", file=sys.stderr)
+        sys.exit(1)
+
     pos = 0
     while True:
         try:
             if os.path.exists(log_file):
-                with open(log_file) as f:
+                file_size = os.path.getsize(log_file)
+                if file_size < pos:
+                    pos = 0
+
+                with open(log_file, encoding="utf-8", errors="replace") as f:
                     f.seek(pos)
                     for line in f:
                         try:
@@ -72,14 +106,19 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
                             t = d.get("type", "")
                             if t == "assistant":
                                 for c in d.get("message", {}).get("content", []):
-                                    if c.get("type") == "text" and c["text"].strip():
+                                    if (
+                                        c.get("type") == "text"
+                                        and c.get("text", "").strip()
+                                    ):
                                         print(
                                             f"  [claude] {c['text'][:120]}",
                                             flush=True,
                                         )
                                     elif c.get("type") == "tool_use":
                                         inp = c.get("input", {})
-                                        name = c["name"]
+                                        if not isinstance(inp, dict):
+                                            inp = {}
+                                        name = c.get("name", "tool_use")
                                         desc = (
                                             inp.get("description", "")
                                             or inp.get("pattern", "")
@@ -93,7 +132,10 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
                                 s = d.get("subtype", "")
                                 print(f"  [result] {s}", flush=True)
                                 if done_flag:
-                                    Path(done_flag).write_text(s)
+                                    try:
+                                        Path(done_flag).write_text(s)
+                                    except OSError:
+                                        pass
                         except (json.JSONDecodeError, KeyError):
                             pass
                     pos = f.tell()
@@ -118,7 +160,7 @@ def cmd_parse_result(log_file):
     """
     result_event = None
     try:
-        with open(log_file) as f:
+        with open(log_file, encoding="utf-8", errors="replace") as f:
             for line in f:
                 try:
                     d = json.loads(line)
@@ -136,6 +178,8 @@ def cmd_parse_result(log_file):
 
     subtype = result_event.get("subtype", "")
     result_text = result_event.get("result", "")
+    if not isinstance(result_text, str):
+        result_text = str(result_text or "")
     is_error = result_event.get("is_error", False)
 
     if is_error or subtype == "error":
@@ -147,8 +191,30 @@ def cmd_parse_result(log_file):
     if context_match:
         print(f"context={context_match.group(1).strip()}")
 
-    # Check the result text for SUCCESS/FAILURE markers
-    # The result field contains the last assistant message text
+    results_match = re.search(r"RESULTS:\s*(.+?)(?:\n|$)", result_text)
+    if results_match:
+        parts = []
+        for part in results_match.group(1).split():
+            m = re.match(r"([A-Za-z_0-9]+)=(SUCCESS|FAILURE)", part)
+            if m:
+                parts.append((m.group(1), m.group(2)))
+        if any(status == "SUCCESS" for _, status in parts):
+            print("status=success")
+        else:
+            best = "?"
+            m = re.search(r"best=([0-9.]+)", result_text)
+            if m:
+                best = m.group(1)
+            print(f"status=failure best={best}")
+        for fname, fstatus in parts:
+            print(
+                f"func_{fname}="
+                f"{'success' if fstatus == 'SUCCESS' else 'failure'}"
+            )
+        return
+
+    # Check the result text for SUCCESS/FAILURE markers.
+    # The result field contains the last assistant message text.
     if re.search(r"\bSUCCESS\b", result_text):
         print("status=success")
     elif re.search(r"\bFAILURE\b", result_text):
@@ -163,16 +229,6 @@ def cmd_parse_result(log_file):
             print("status=success")
         else:
             print(f"status=failure best=?")
-
-    # Emit per-function results from "RESULTS: func1=SUCCESS func2=FAILURE(best=X%)" line
-    results_match = re.search(r"RESULTS:\s*(.+?)(?:\n|$)", result_text)
-    if results_match:
-        for part in results_match.group(1).split():
-            m = re.match(r"([A-Za-z_0-9]+)=(SUCCESS|FAILURE)", part)
-            if m:
-                fname, fstatus = m.group(1), m.group(2)
-                print(f"func_{fname}={'success' if fstatus == 'SUCCESS' else 'failure'}")
-
 
 def cmd_token_usage(log_file):
     """Sum token usage across all assistant messages in stream JSON."""
@@ -208,18 +264,26 @@ def cmd_token_usage(log_file):
 def cmd_extract_log(stream_log, output_log):
     """Extract readable log from stream JSON."""
     try:
-        with open(stream_log) as inp, open(output_log, "w") as out:
+        Path(output_log).parent.mkdir(parents=True, exist_ok=True)
+        with open(stream_log, encoding="utf-8", errors="replace") as inp, open(
+            output_log,
+            "w",
+        ) as out:
             for line in inp:
                 try:
                     d = json.loads(line)
                     if d.get("type") == "assistant":
                         for c in d.get("message", {}).get("content", []):
                             if c.get("type") == "text":
-                                out.write(c["text"] + "\n")
+                                out.write(c.get("text", "") + "\n")
                             elif c.get("type") == "tool_use":
-                                v = list(c["input"].values())
+                                inp_obj = c.get("input", {})
+                                if not isinstance(inp_obj, dict):
+                                    inp_obj = {}
+                                v = list(inp_obj.values())
                                 out.write(
-                                    f">> {c['name']}({str(v[0])[:80] if v else ''})\n"
+                                    f">> {c.get('name', 'tool_use')}"
+                                    f"({str(v[0])[:80] if v else ''})\n"
                                 )
                 except (json.JSONDecodeError, KeyError):
                     pass
@@ -235,39 +299,61 @@ def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size=
     If batch_size > 1, picks up to that many small functions from the same file.
     Prints JSON array of targets.
     """
-    batch_size = int(batch_size)
-    stubs = json.load(sys.stdin)
-    excluded = set(x.lower() for x in json.loads(excluded_json))
+    try:
+        batch_size = max(1, int(batch_size))
+    except ValueError:
+        batch_size = 1
 
-    progress = []
-    if os.path.exists(progress_file) and os.path.getsize(progress_file) > 0:
-        with open(progress_file) as f:
-            progress = json.load(f)
-    already_tried = set(e["name"] for e in progress)
+    try:
+        stubs = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        stubs = []
+    if not isinstance(stubs, list):
+        stubs = []
+
+    try:
+        excluded_values = json.loads(excluded_json)
+    except json.JSONDecodeError:
+        excluded_values = []
+    excluded = {normalize_name(x) for x in excluded_values}
+
+    progress = load_json_file(progress_file, [])
+    if not isinstance(progress, list):
+        progress = []
+    already_tried = {
+        normalize_name(e.get("name"))
+        for e in progress
+        if isinstance(e, dict) and e.get("name")
+    }
 
     # Also exclude functions already matched or persistently failed in the draft status file
     if draft_status_file and os.path.exists(draft_status_file):
-        try:
-            with open(draft_status_file) as f:
-                for e in json.load(f):
-                    if e.get("status") in ("matched", "failed"):
-                        already_tried.add(e["name"])
-        except (json.JSONDecodeError, KeyError):
-            pass
+        draft_entries = load_json_file(draft_status_file, [])
+        if isinstance(draft_entries, list):
+            for e in draft_entries:
+                if (
+                    isinstance(e, dict)
+                    and e.get("status") in ("matched", "failed")
+                    and e.get("name")
+                ):
+                    already_tried.add(normalize_name(e["name"]))
 
-    branch_funcs = set(
-        line for line in branch_funcs_str.strip().splitlines() if line
-    )
+    branch_funcs = {
+        normalize_name(line)
+        for line in branch_funcs_str.strip().splitlines()
+        if line.strip()
+    }
 
     targets = [
         s
         for s in stubs
-        if s["name"].lower() not in excluded
-        and s["name"] not in already_tried
-        and s["name"] not in branch_funcs
-        and s["size"] > 0
+        if isinstance(s, dict)
+        and normalize_name(s.get("name")) not in excluded
+        and normalize_name(s.get("name")) not in already_tried
+        and normalize_name(s.get("name")) not in branch_funcs
+        and parse_int(s.get("size", 0), 0) > 0
     ]
-    targets.sort(key=lambda s: s["size"])
+    targets.sort(key=lambda s: parse_int(s.get("size", 0), 0))
 
     if batch_size <= 1 or not targets:
         print(json.dumps(targets[:1]))
@@ -275,9 +361,12 @@ def cmd_filter_stubs(excluded_json, branch_funcs_str, progress_file, batch_size=
 
     # Batch: pick up to batch_size small functions from the same file as the smallest
     first = targets[0]
-    same_file = [s for s in targets if s["file"] == first["file"]]
+    first_file = first.get("file")
+    same_file = [s for s in targets if s.get("file") == first_file]
     # Only batch functions that are small (< 200 bytes)
-    batch = [s for s in same_file if s["size"] < 200][:batch_size]
+    batch = [
+        s for s in same_file if parse_int(s.get("size", 0), 0) < 200
+    ][:batch_size]
     if not batch:
         batch = [first]
     print(json.dumps(batch))
@@ -379,7 +468,14 @@ def cmd_extract_asm(asm_file, func_name):
 
 def cmd_cutoff_epoch(hour_str):
     """Print cutoff epoch timestamp for given hour (handles midnight wrap)."""
-    hour = int(hour_str)
+    try:
+        hour = int(hour_str)
+    except ValueError:
+        print("invalid hour", file=sys.stderr)
+        sys.exit(1)
+    if hour < 0 or hour > 23:
+        print("hour must be between 0 and 23", file=sys.stderr)
+        sys.exit(1)
     now = datetime.now()
     cutoff = now.replace(hour=hour, minute=0, second=0, microsecond=0)
     if cutoff <= now:
@@ -389,13 +485,13 @@ def cmd_cutoff_epoch(hour_str):
 
 def cmd_progress_save(progress_file, func_name, status):
     """Append an entry to the progress JSON file."""
-    data = []
-    if os.path.exists(progress_file):
-        with open(progress_file) as f:
-            data = json.load(f)
+    data = load_json_file(progress_file, [])
+    if not isinstance(data, list):
+        data = []
     data.append(
         {"name": func_name, "status": status, "time": time.strftime("%H:%M:%S")}
     )
+    Path(progress_file).parent.mkdir(parents=True, exist_ok=True)
     with open(progress_file, "w") as f:
         json.dump(data, f, indent=2)
 
@@ -404,10 +500,13 @@ def cmd_progress_check(progress_file, func_name):
     """Exit 0 if function was already tried (success or failure), else exit 1."""
     if not os.path.exists(progress_file):
         sys.exit(1)
-    with open(progress_file) as f:
-        entries = json.load(f)
+    entries = load_json_file(progress_file, [])
+    if not isinstance(entries, list):
+        sys.exit(1)
     if any(
-        e["name"] == func_name and e["status"] in ("success", "failure")
+        isinstance(e, dict)
+        and e.get("name") == func_name
+        and e.get("status") in ("success", "failure")
         for e in entries
     ):
         sys.exit(0)
@@ -423,18 +522,23 @@ def cmd_parse_rate_limit(log_file, backoff_str):
         print(backoff)
         return
 
-    m = re.search(r"resets (\d+)(am|pm)", text, re.I)
+    m = re.search(r"resets (\d{1,2})(?::(\d{2}))?(am|pm)", text, re.I)
     if m:
         hour = int(m.group(1))
+        minute = int(m.group(2) or 0)
         if hour < 1 or hour > 12:
             print(backoff)
             return
-        if m.group(2).lower() == "pm" and hour != 12:
+        if minute < 0 or minute > 59:
+            print(backoff)
+            return
+        meridiem = m.group(3).lower()
+        if meridiem == "pm" and hour != 12:
             hour += 12
-        elif m.group(2).lower() == "am" and hour == 12:
+        elif meridiem == "am" and hour == 12:
             hour = 0
         now = datetime.now()
-        reset = now.replace(hour=hour, minute=1, second=0, microsecond=0)
+        reset = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
         if reset <= now:
             reset += timedelta(days=1)
         wait = int((reset - now).total_seconds())
@@ -531,10 +635,9 @@ def cmd_extract_struct(types_header, struct_name):
         print(f"(header not found: {types_header})")
         return
 
-    target = f"struct {struct_name} " + "{"
     start = None
     for i, line in enumerate(lines):
-        if target in line:
+        if re.search(rf"^\s*struct\s+{re.escape(struct_name)}\b.*\{{\s*$", line):
             start = i
             break
 
@@ -619,7 +722,7 @@ def cmd_github_exclusions(repo):
                 names.add(m.group(1).lower())
         except Exception:
             pass
-    print(json.dumps(list(names)))
+    print(json.dumps(sorted(names)))
 
 
 def cmd_draft_pr_set_status(status_file, *args):
