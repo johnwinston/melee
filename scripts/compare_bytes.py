@@ -22,8 +22,15 @@ from elftools.elf.sections import SymbolTableSection
 # PPC relocation types and the instruction bits they patch.
 # Mask = bits that the linker fills in (should be ignored in comparison).
 R_PPC_ADDR16_LO = 4  # lower 16 bits
+R_PPC_ADDR16_HI = 5  # upper 16 bits
 R_PPC_ADDR16_HA = 6  # upper 16 bits (half-word, adjusted)
+R_PPC_ADDR14 = 7
+R_PPC_ADDR14_BRTAKEN = 8
+R_PPC_ADDR14_BRNTAKEN = 9
 R_PPC_REL24 = 10     # bits 6..29 (branch relative, 24-bit)
+R_PPC_REL14 = 11
+R_PPC_REL14_BRTAKEN = 12
+R_PPC_REL14_BRNTAKEN = 13
 R_PPC_EMB_SDA21 = 109  # bits 11..31 (SDA-relative, 21-bit)
 
 # Which bits to zero out for each relocation type.
@@ -31,8 +38,15 @@ R_PPC_EMB_SDA21 = 109  # bits 11..31 (SDA-relative, 21-bit)
 RELOC_MASKS = {
     # Type: (alignment within instruction, 32-bit mask of bits to KEEP)
     R_PPC_ADDR16_LO: 0xFFFF0000,   # keep opcode+reg, zero lower 16
+    R_PPC_ADDR16_HI: 0xFFFF0000,   # keep opcode+reg, zero lower 16
     R_PPC_ADDR16_HA: 0xFFFF0000,   # keep opcode+reg, zero lower 16
+    R_PPC_ADDR14: 0xFFFF0003,      # keep opcode+BO/BI+AA/LK, zero BD
+    R_PPC_ADDR14_BRTAKEN: 0xFFFF0003,
+    R_PPC_ADDR14_BRNTAKEN: 0xFFFF0003,
     R_PPC_REL24:     0xFC000003,   # keep opcode bits and AA/LK
+    R_PPC_REL14: 0xFFFF0003,
+    R_PPC_REL14_BRTAKEN: 0xFFFF0003,
+    R_PPC_REL14_BRNTAKEN: 0xFFFF0003,
     R_PPC_EMB_SDA21: 0xFFE00000,   # keep opcode+rD, zero 21-bit offset
 }
 
@@ -73,18 +87,29 @@ def get_function_info(elf, func_name):
 
 def get_relocations(elf, section_name=".rela.text"):
     """Return dict mapping byte offset -> (reloc_type, symbol_name)."""
-    rela = elf.get_section_by_name(section_name)
-    if rela is None:
-        return {}
     symtab = elf.get_section_by_name(".symtab")
+    if not isinstance(symtab, SymbolTableSection):
+        return {}
+
     relocs = {}
-    for rel in rela.iter_relocations():
-        offset = rel["r_offset"]
-        rtype = rel["r_info_type"]
-        sym_idx = rel["r_info_sym"]
-        sym = symtab.get_symbol(sym_idx)
-        sym_name = sym.name if sym else f"<sym#{sym_idx}>"
-        relocs[offset] = (rtype, sym_name)
+
+    section_names = (section_name, ".rel.text")
+    seen_sections = set()
+    for name in section_names:
+        if name in seen_sections:
+            continue
+        seen_sections.add(name)
+        rela = elf.get_section_by_name(name)
+        if rela is None:
+            continue
+
+        for rel in rela.iter_relocations():
+            offset = rel["r_offset"]
+            rtype = rel["r_info_type"]
+            sym_idx = rel["r_info_sym"]
+            sym = symtab.get_symbol(sym_idx)
+            sym_name = sym.name if sym else f"<sym#{sym_idx}>"
+            relocs[offset] = (rtype, sym_name)
     return relocs
 
 
@@ -119,8 +144,17 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
             f"original={orig_size} bytes, compiled={comp_size} bytes"
         )
 
-    orig_text = orig_elf.get_section_by_name(".text").data()
-    comp_text = comp_elf.get_section_by_name(".text").data()
+    orig_text_section = orig_elf.get_section_by_name(".text")
+    comp_text_section = comp_elf.get_section_by_name(".text")
+    if orig_text_section is None:
+        print("ERROR: Original object is missing a .text section")
+        return False
+    if comp_text_section is None:
+        print("ERROR: Compiled object is missing a .text section")
+        return False
+
+    orig_text = orig_text_section.data()
+    comp_text = comp_text_section.data()
 
     orig_bytes = orig_text[orig_offset:orig_offset + orig_size]
     comp_bytes = comp_text[comp_offset:comp_offset + comp_size]
@@ -144,7 +178,8 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
     comp_func_relocs = func_relocs(comp_relocs, comp_offset, comp_size)
 
     # Compare instruction by instruction
-    max_insns = max(len(orig_bytes), len(comp_bytes)) // 4
+    max_len = max(len(orig_bytes), len(comp_bytes))
+    max_insns = (max_len + 3) // 4
     mismatches = 0
     reloc_diffs = 0
     lines = []
@@ -152,25 +187,39 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
     for i in range(max_insns):
         byte_off = i * 4
 
-        if byte_off + 4 > len(orig_bytes):
+        orig_chunk = orig_bytes[byte_off:byte_off + 4]
+        comp_chunk = comp_bytes[byte_off:byte_off + 4]
+
+        if not orig_chunk:
             lines.append(
                 f"  +{byte_off:04X}:  --------  "
-                f"{comp_bytes[byte_off:byte_off+4].hex().upper():>8s}  "
+                f"{comp_chunk.hex().upper():>8s}  "
                 f"EXTRA (compiled)"
             )
             mismatches += 1
             continue
-        if byte_off + 4 > len(comp_bytes):
+        if not comp_chunk:
             lines.append(
                 f"  +{byte_off:04X}:  "
-                f"{orig_bytes[byte_off:byte_off+4].hex().upper():>8s}  "
+                f"{orig_chunk.hex().upper():>8s}  "
                 f"--------  EXTRA (original)"
             )
             mismatches += 1
             continue
 
-        orig_word = struct.unpack(">I", orig_bytes[byte_off:byte_off + 4])[0]
-        comp_word = struct.unpack(">I", comp_bytes[byte_off:byte_off + 4])[0]
+        if len(orig_chunk) != 4 or len(comp_chunk) != 4:
+            match = orig_chunk == comp_chunk
+            if not match:
+                mismatches += 1
+            lines.append(
+                f"  +{byte_off:04X}:  {orig_chunk.hex().upper():>8s}  "
+                f"{comp_chunk.hex().upper():>8s}  "
+                f"{'ok (tail)' if match else '<<< MISMATCH (tail bytes)'}"
+            )
+            continue
+
+        orig_word = struct.unpack(">I", orig_chunk)[0]
+        comp_word = struct.unpack(">I", comp_chunk)[0]
 
         # Check for relocations at this instruction
         orig_rel = orig_func_relocs.get(byte_off)
@@ -191,6 +240,7 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
                         f"  RELOC TYPE DIFF: orig={orig_rtype} "
                         f"comp={comp_rtype}"
                     )
+                    reloc_diffs += 1
                 elif orig_sym != comp_sym:
                     reloc_note = (
                         f"  RELOC SYM DIFF: orig={orig_sym} "
@@ -205,12 +255,14 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
                     f"  RELOC ONLY IN ORIG: {orig_rel[1]} "
                     f"(type={orig_rel[0]})"
                 )
+                reloc_diffs += 1
             else:
                 mask_type = comp_rel[0]
                 reloc_note = (
                     f"  RELOC ONLY IN COMP: {comp_rel[1]} "
                     f"(type={comp_rel[0]})"
                 )
+                reloc_diffs += 1
 
             masked_orig = mask_instruction(orig_word, mask_type)
             masked_comp = mask_instruction(comp_word, mask_type)
@@ -270,11 +322,16 @@ def compare_function(orig_elf, comp_elf, func_name, verbose=False,
                 f"{'COMPILED':>8s}  STATUS"
             )
             for line in lines:
-                if "MISMATCH" in line or "EXTRA" in line or "DIFF" in line:
+                if (
+                    "MISMATCH" in line
+                    or "EXTRA" in line
+                    or "DIFF" in line
+                    or "RELOC ONLY" in line
+                ):
                     print(line)
 
     print()
-    return mismatches == 0
+    return mismatches == 0 and reloc_diffs == 0
 
 
 def main():

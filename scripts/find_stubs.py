@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Find undecompiled function stubs in a C source file.
 
-Scans for `/// #function_name` markers where the next non-blank line
-is NOT the function definition (meaning it's still a stub).
+Scans for `/// #function_name` markers whose function is still missing
+an implementation anywhere in the file.
 
 Outputs JSON array of {name, size, file, line} sorted by size ascending.
 """
@@ -13,12 +13,20 @@ import sys
 from pathlib import Path
 
 SYMBOLS_FILE = Path("config/GALE01/symbols.txt")
+STUB_MARKER_RE = re.compile(r"^/// #(\w+)\s*$")
+FUNC_DEF_RE = re.compile(r"^\s*[\w][\w\s\*]*\b([A-Za-z_]\w*)\s*\(")
+CONTROL_KEYWORDS = frozenset({"if", "for", "while", "switch"})
 
 
 def get_symbol_sizes():
     """Parse symbols.txt to get function sizes."""
     sizes = {}
-    for line in SYMBOLS_FILE.read_text().splitlines():
+    try:
+        lines = SYMBOLS_FILE.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return sizes
+
+    for line in lines:
         m = re.match(
             r"(\w+)\s*=\s*\.text:0x[0-9A-Fa-f]+;\s*//\s*type:function\s+size:0x([0-9A-Fa-f]+)",
             line,
@@ -28,32 +36,45 @@ def get_symbol_sizes():
     return sizes
 
 
-def find_stubs(c_file):
-    """Find stub markers where no implementation follows."""
-    text = Path(c_file).read_text()
-    lines = text.splitlines()
-    stubs = []
+def find_defined_functions(lines):
+    """Return the set of implemented function names in a file."""
+    defined = set()
+    total = len(lines)
+
     for i, line in enumerate(lines):
-        m = re.match(r"^/// #(\w+)\s*$", line)
+        m = FUNC_DEF_RE.match(line)
         if not m:
             continue
+
         func_name = m.group(1)
-        # Check if function is defined (not just declared) anywhere in the file
-        # A definition looks like: `type func_name(` at the start of a line
-        defn_pattern = re.compile(
-            rf"^\w[\w\s\*]*\b{re.escape(func_name)}\s*\(", re.MULTILINE
-        )
-        has_impl = False
-        for m2 in defn_pattern.finditer(text):
-            line_no = text[:m2.start()].count("\n")
-            if line_no == i:
-                continue
-            # Verify it has { within next few lines (definition, not declaration)
-            snippet = "\n".join(lines[line_no : line_no + 3])
-            if "{" in snippet:
-                has_impl = True
-                break
-        if not has_impl:
+        if func_name in CONTROL_KEYWORDS:
+            continue
+
+        snippet = "\n".join(lines[i:min(total, i + 4)])
+        if "{" in snippet:
+            defined.add(func_name)
+
+    return defined
+
+
+def find_stubs(c_file):
+    """Find stub markers whose function is not implemented in the file."""
+    text = Path(c_file).read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+    defined = find_defined_functions(lines)
+    stubs = []
+    seen = set()
+    for i, line in enumerate(lines):
+        m = STUB_MARKER_RE.match(line)
+        if not m:
+            continue
+
+        func_name = m.group(1)
+        if func_name in seen:
+            continue
+        seen.add(func_name)
+
+        if func_name not in defined:
             stubs.append({"name": func_name, "line": i + 1, "file": str(c_file)})
     return stubs
 

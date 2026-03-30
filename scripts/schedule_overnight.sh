@@ -13,11 +13,32 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LABEL="com.melee.decomp-overnight"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 SCRIPT="$REPO_ROOT/scripts/decomp_overnight.sh"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
+
+validate_hour() {
+    case "${1:-}" in
+        ''|*[!0-9]*)
+            echo "ERROR: HOUR must be an integer between 0 and 23" >&2
+            exit 1
+            ;;
+    esac
+    if [ "$1" -lt 0 ] || [ "$1" -gt 23 ]; then
+        echo "ERROR: HOUR must be between 0 and 23" >&2
+        exit 1
+    fi
+}
 
 case "${1:-help}" in
     install)
         # Default: 2 AM, scan all files, attempt up to 10 functions
         HOUR=${HOUR:-2}
+        validate_hour "$HOUR"
+        mkdir -p "$LAUNCH_AGENTS_DIR" "$REPO_ROOT/scripts/logs"
+        if [ ! -x "$SCRIPT" ]; then
+            echo "ERROR: script not found or not executable: $SCRIPT" >&2
+            exit 1
+        fi
+        launchctl unload "$PLIST" 2>/dev/null || true
         cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -80,7 +101,7 @@ EOF
         ;;
 
     status)
-        if launchctl list | grep -q "$LABEL"; then
+        if launchctl list | grep -Fq "$LABEL"; then
             echo "Active: overnight decomp is scheduled"
             echo "Plist: $PLIST"
             launchctl list "$LABEL" 2>/dev/null || true

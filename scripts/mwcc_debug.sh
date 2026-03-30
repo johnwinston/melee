@@ -20,13 +20,23 @@ DEBUG_DLL="$REPO_ROOT/scripts/mwcc_debug/lmgr326b_debug.dll"
 STOCK_DLL="$REPO_ROOT/scripts/mwcc_debug/lmgr326b_stock.dll"
 ACTIVE_DLL="$COMPILER_DIR/lmgr326b.dll"
 
+require_file() {
+    local path="$1"
+    if [ ! -f "$path" ]; then
+        echo "ERROR: Missing file: $path" >&2
+        exit 1
+    fi
+}
+
 save_stock() {
+    require_file "$ACTIVE_DLL"
     if [ ! -f "$STOCK_DLL" ]; then
         cp "$ACTIVE_DLL" "$STOCK_DLL"
     fi
 }
 
 enable_debug() {
+    require_file "$DEBUG_DLL"
     save_stock
     cp "$DEBUG_DLL" "$ACTIVE_DLL"
 }
@@ -50,16 +60,35 @@ case "${1:-}" in
     compile)
         shift
         SOURCE_FILE="${1:?Usage: mwcc_debug.sh compile src/melee/path/to/file.c}"
+        require_file "$SOURCE_FILE"
         OBJ_FILE="build/GALE01/${SOURCE_FILE%.c}.o"
 
         # Get the ninja compile command and strip sjiswrap to call compiler directly
-        CMD=$(ninja -t commands "$OBJ_FILE" 2>/dev/null | grep mwcc | head -1)
+        CMD=$(ninja -t commands "$OBJ_FILE" 2>/dev/null | awk '/mwcc/ { print; exit }')
         if [ -z "$CMD" ]; then
             echo "ERROR: Could not find compile command for $OBJ_FILE"
             exit 1
         fi
-        # Remove sjiswrap wrapper, keep everything else up to the && separator
-        COMPILE_CMD=$(echo "$CMD" | sed 's|wine build/tools/sjiswrap.exe |wine |' | sed 's| &&.*||')
+
+        # Extract the wrapped compiler invocation even if ninja prepends
+        # setup commands like mkdir/touch before the actual compile step.
+        COMPILE_CMD=$(printf '%s\n' "$CMD" | python3 -c '
+import re
+import sys
+
+command = sys.stdin.read().strip()
+match = re.search(
+    r"(?:^|&&\s*)wine build/tools/sjiswrap\.exe (.*?)(?:\s*&&|$)",
+    command,
+)
+if not match:
+    raise SystemExit(1)
+print("wine " + match.group(1).strip())
+')
+        if [ -z "$COMPILE_CMD" ]; then
+            echo "ERROR: Could not isolate mwcc compile command for $OBJ_FILE"
+            exit 1
+        fi
 
         enable_debug
         trap 'disable_debug' EXIT
