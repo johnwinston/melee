@@ -10,6 +10,7 @@
 #include "mn/mnmain.h"
 #include "ty/toy.h"
 
+#include <sysdolphin/baselib/fog.h>
 #include <sysdolphin/baselib/gobjgxlink.h>
 #include <sysdolphin/baselib/gobjobject.h>
 #include <sysdolphin/baselib/gobjplink.h>
@@ -47,7 +48,42 @@ void fn_801A7A8C(HSD_GObj* gobj)
 
 /// #gm_801A7B00
 
-/// #fn_801A7FB4
+void fn_801A7FB4(HSD_GObj* gobj)
+{
+    HSD_Fog* fog = GET_FOG(gobj);
+    int i;
+    int count;
+    PAD_STACK(0x10);
+
+    gm_801A4310();
+    count = 0;
+    for (i = 0; i < 0x1A; i++) {
+        if (un_803048C0(gm_801A659C(i)) ? true : false) {
+            count++;
+        }
+    }
+    if (count <= 5) {
+        if (fog->aobj->curr_frame < 185.0f) {
+            HSD_FogInterpretAnim(fog);
+        }
+        return;
+    }
+
+    gm_801A4310();
+    count = 0;
+    for (i = 0; i < 0x1A; i++) {
+        if (un_803048C0(gm_801A659C(i)) ? true : false) {
+            count++;
+        }
+    }
+    if (count <= 0xD) {
+        if (fog->aobj->curr_frame < 200.0f) {
+            HSD_FogInterpretAnim(fog);
+        }
+    } else {
+        HSD_FogInterpretAnim(fog);
+    }
+}
 
 void fn_801A80CC(HSD_GObj* gobj)
 {
