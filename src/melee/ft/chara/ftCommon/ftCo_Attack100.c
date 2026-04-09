@@ -1450,7 +1450,61 @@ void ftCo_800D9C98(Fighter_GObj* gobj)
 
 /// #fn_800D9CE8
 
-/// #ftCo_CatchPull_Anim
+void ftCo_CatchPull_Anim(Fighter_GObj* gobj)
+{
+    Fighter* fp = GET_FIGHTER(gobj);
+    int should_transition = false;
+    PAD_STACK(16);
+
+    switch (fp->kind) {
+    case FTKIND_LINK:
+    case FTKIND_CLINK:
+    {
+        Item_GObj* item_gobj = fp->fv.lk.xC;
+        if (item_gobj == NULL) {
+            should_transition = true;
+        } else {
+            Item* ip = GET_ITEM(item_gobj);
+            if (ip->xDD4_itemVar.linkhookshot.x14 != 0) {
+                should_transition = true;
+            }
+        }
+        break;
+    }
+    case FTKIND_SAMUS:
+    {
+        Item_GObj* item_gobj = fp->fv.ss.x223C;
+        if (item_gobj == NULL) {
+            should_transition = true;
+        } else {
+            Item* ip = GET_ITEM(item_gobj);
+            if (ip->xDD4_itemVar.samusgrapple.x14 != 0) {
+                should_transition = true;
+            }
+        }
+        break;
+    }
+    default:
+        if (ftAnim_IsFramesRemaining(gobj) != 0) {
+            int result;
+            if (fp->throw_flags_b3) {
+                fp->throw_flags_b3 = 0;
+                result = 1;
+            } else {
+                result = 0;
+            }
+            if (result == 0) {
+                break;
+            }
+        }
+        should_transition = true;
+        break;
+    }
+
+    if (should_transition) {
+        fn_800DA1D8(gobj);
+    }
+}
 
 void ftCo_CatchPull_IASA(Fighter_GObj* gobj) {}
 
