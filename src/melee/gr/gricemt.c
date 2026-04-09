@@ -944,7 +944,29 @@ void grIceMt_801F8CDC(Ground_GObj* gobj, s16* joint_indices, int count,
 
 /// #fn_801F8E58
 
-/// #fn_801F9038
+s32 fn_801F9038(Ground_GObj* gobj)
+{
+    Ground* gp = gobj->user_data;
+    s32 idx;
+    s32 i;
+    PAD_STACK(8);
+
+    do {
+        idx = HSD_Randi(6);
+    } while (gp->gv.icemt.xF4[idx] != 0 ||
+             gp->gv.icemt.xC4 == grIm_803E4068[idx].id ||
+             gp->gv.icemt.xC6 == grIm_803E4068[idx].id);
+
+    for (i = 0; i < 6; i++) {
+        if (gp->gv.icemt.xF4[i] > 0) {
+            gp->gv.icemt.xF4[i]--;
+        }
+    }
+
+    gp->gv.icemt.xF4[idx] = *(s16*) grIm_804D69F4;
+
+    return grIm_803E4068[idx].id;
+}
 
 IceMountainParams* fn_801F9150(HSD_GObj* arg0)
 {
