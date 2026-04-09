@@ -3,17 +3,13 @@
 import argparse
 import json
 from pathlib import Path
-from typing import NoReturn, TextIO, cast
+from typing import TextIO, cast
 
 ROOT = Path(__file__).parents[1]
 DTK_ROOT = ROOT / "build/GALE01"
 REPORT_PATH = DTK_ROOT / "report.json"
 SRC_ROOT = ROOT / "src"
 MODULE = "main"
-
-
-def wip(msg: str = "") -> NoReturn:
-    raise NotImplementedError(msg)
 
 
 def main() -> None:

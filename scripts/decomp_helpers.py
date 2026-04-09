@@ -62,8 +62,8 @@ def parse_int(value, default=0):
 
 def cmd_ninja_progress():
     """Read ninja output from stdin, display progress bar."""
-    signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
-    signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+    signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     for line in sys.stdin:
         m = re.match(r"\[(\d+)/(\d+)\]", line)
         if m:
@@ -87,8 +87,8 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
     live progress during long first responses. Falls back to per-block
     assistant events when partials are absent.
     """
-    signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
-    signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+    signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         pid = int(pid_str)
     except ValueError:
