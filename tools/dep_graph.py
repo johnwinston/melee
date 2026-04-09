@@ -39,7 +39,6 @@ OBJECT_PATTERN = re.compile(
 class ObjectFile:
     path: str
     status: Literal["Matching", "NonMatching", "Equivalent"]
-    defined_symbols: set[str] = field(default_factory=set)
     undefined_symbols: set[str] = field(default_factory=set)
     function_count: int = 0
     match_percent: float = 0.0
@@ -200,7 +199,6 @@ def build_dependency_graph(
     for path, obj in objects.items():
         obj_path = get_object_path(path)
         defined, undefined = analyze_symbols(nm_tool, obj_path)
-        obj.defined_symbols = defined
         obj.undefined_symbols = undefined
 
         for sym in defined:
@@ -260,7 +258,6 @@ def find_leaves(
 def find_unlock_chain(
     objects: dict[str, ObjectFile],
     rdeps: dict[str, set[str]],
-    max_depth: int = 3,
 ) -> list[tuple[str, list[str]]]:
     """
     Find files that would unlock other files when converted to Matching.

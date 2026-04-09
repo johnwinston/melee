@@ -301,10 +301,6 @@ includes_base = [
     "extern/dolphin/include",
 ]
 
-cflags_melee = [
-    *cflags_base,
-]
-
 config.linker_version = "GC/1.3.2"
 
 Objects = List[Object]
@@ -430,11 +426,6 @@ NonMatching = False  # Object does not match and should not be linked
 Equivalent = (
     config.non_matching
 )  # Object should be linked when configured with --non-matching
-
-
-# Object is only matching for specific versions
-def MatchingFor(*versions):
-    return config.version in versions
 
 
 config.warn_missing_config = True

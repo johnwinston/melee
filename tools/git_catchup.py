@@ -26,10 +26,7 @@ def checkout_except(repo: git.Repo, target: str, base: str):
 
 if __name__ == "__main__":
     import sys
-    import os
     import argparse
-
-    script_name = os.path.basename(__file__)
 
     parser = argparse.ArgumentParser(
         description="Check out all files that are not " "changed between two branches"

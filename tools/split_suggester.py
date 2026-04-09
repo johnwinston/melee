@@ -36,7 +36,6 @@ import os
 import struct
 import sys
 import time
-from pathlib import Path
 from collections import OrderedDict
 
 Version = "1.3"
