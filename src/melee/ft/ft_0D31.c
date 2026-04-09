@@ -527,7 +527,43 @@ void ftCo_Rebirth_Anim(Fighter_GObj* gobj)
 
 void ftCo_Rebirth_IASA(Fighter_GObj* gobj) {}
 
-/// #ftCo_Rebirth_Phys
+void ftCo_Rebirth_Phys(Fighter_GObj* gobj)
+{
+    Fighter* new_var;
+    Vec3 cur_pos;
+    Vec3 player_pos;
+    Vec3 stage_pos;
+    Fighter* fp = gobj->user_data;
+    new_var = fp;
+    if (!new_var->x221F_b4) {
+        if (new_var->smash_attrs.x2135 != -1) {
+            Stage_80224E38(&stage_pos, new_var->smash_attrs.x2135);
+            Player_GetSomePos(new_var->player_id, &player_pos);
+            new_var->mv.co.common.x4 =
+                stage_pos.x + player_pos.x +
+                new_var->facing_dir * ftCommon_800804EC(new_var);
+            *(f32*) &new_var->mv.co.common.x8 =
+                stage_pos.y + player_pos.y;
+            *(f32*) &new_var->mv.co.common.xC = 0.0f;
+        }
+        ftCommon_8007F8B4(new_var, &cur_pos);
+        {
+            float inv = 1.0f / (float) new_var->mv.co.common.x0;
+            new_var->self_vel.x =
+                (new_var->mv.co.common.x4 - cur_pos.x) * inv;
+            new_var->self_vel.y =
+                (*(f32*) &new_var->mv.co.common.x8 - cur_pos.y) *
+                inv;
+        }
+    } else {
+        HSD_GObj* other_gobj =
+            Player_GetEntityAtIndex(new_var->player_id, 0);
+        Fighter* other_fp = other_gobj->user_data;
+        new_var->self_vel.x = other_fp->self_vel.x;
+        new_var->self_vel.y = other_fp->self_vel.y;
+    }
+    PAD_STACK(12);
+}
 
 void ftCo_Rebirth_Coll(HSD_GObj* gobj)
 {
