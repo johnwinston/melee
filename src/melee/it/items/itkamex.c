@@ -282,7 +282,19 @@ bool it_802CAE60(Item_GObj* gobj)
     return false;
 }
 
-/// #it_802CAE94
+void it_802CAE94(Item_GObj* gobj)
+{
+    HSD_JObj* jobj = HSD_GObjGetHSDObj(gobj);
+
+    if (jobj->scale.x < 1.0) {
+        Vec3 scale;
+        HSD_JObjGetScale(jobj, &scale);
+        scale.x += 0.06;
+        scale.y += 0.06;
+        scale.z += 0.06;
+        HSD_JObjSetScale(jobj, &scale);
+    }
+}
 
 bool it_802CAFB4(Item_GObj* gobj)
 {
