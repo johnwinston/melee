@@ -13,7 +13,9 @@
 #include "gr/grmaterial.h"
 #include "gr/grzakogenerator.h"
 #include "gr/inlines.h"
+#include "it/it_26B1.h"
 #include "lb/lb_00B0.h"
+#include "mp/mplib.h"
 
 #include <baselib/gobj.h>
 #include <baselib/gobjgxlink.h>
@@ -171,7 +173,52 @@ bool grKinokoRoute_80207C80(Ground_GObj* arg)
 
 void grKinokoRoute_80208368(Ground_GObj* arg) {}
 
-/// #grKinokoRoute_8020836C
+void grKinokoRoute_8020836C(Ground_GObj* gobj, int arg1)
+{
+    HSD_JObj* jobj = Ground_801C3FA4(gobj, 0x53);
+    Item_GObj* cur;
+    PAD_STACK(16);
+
+    if (jobj == NULL) {
+        return;
+    }
+
+    if (arg1 != 0) {
+        HSD_JObjClearFlagsAll(jobj, 0x10);
+        mpJointListAdd(0x3C);
+        mpJointListAdd(0x33);
+
+        for (cur = HSD_GObj_Entities->items; cur != NULL;
+             cur = cur->next)
+        {
+            if (itGetKind(cur) == 0xA0) {
+                grMaterial_801C8E08(cur);
+            }
+        }
+
+        mpJointListAdd(0x0C);
+        mpJointListAdd(0x0D);
+        mpJointListAdd(0x0E);
+        mpJointListAdd(0x0F);
+    } else {
+        HSD_JObjSetFlagsAll(jobj, 0x10);
+        mpLib_80057BC0(0x3C);
+        mpLib_80057BC0(0x33);
+
+        for (cur = HSD_GObj_Entities->items; cur != NULL;
+             cur = cur->next)
+        {
+            if (itGetKind(cur) == 0xA0) {
+                grMaterial_801C8E28(cur);
+            }
+        }
+
+        mpLib_80057BC0(0x0C);
+        mpLib_80057BC0(0x0D);
+        mpLib_80057BC0(0x0E);
+        mpLib_80057BC0(0x0F);
+    }
+}
 
 bool grKinokoRoute_80208480(bool arg)
 {
