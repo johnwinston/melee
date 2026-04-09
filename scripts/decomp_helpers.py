@@ -81,6 +81,11 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
     """Poll stream JSON log, print live summaries, exit when PID dies.
 
     If done_flag path is given, writes to it when a result event is seen.
+
+    Supports --include-partial-messages: when stream_event events arrive,
+    text/thinking deltas are printed inline as they stream so the user sees
+    live progress during long first responses. Falls back to per-block
+    assistant events when partials are absent.
     """
     signal.signal(signal.SIGINT, lambda *a: sys.exit(0))
     signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
@@ -91,6 +96,25 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
         sys.exit(1)
 
     pos = 0
+    start_time = time.time()
+    last_event_time = start_time
+    last_heartbeat = start_time
+    HEARTBEAT_INTERVAL = 15  # seconds between idle heartbeats
+    saw_partials = False
+    # Per-block streaming state
+    current_block_type = None  # "thinking" | "text" | "tool_use" | None
+    block_has_content = False  # did this block already print anything?
+    thinking_chars_printed = 0
+    THINKING_PREVIEW_MAX = 200  # cap thinking echo per block to keep output tidy
+
+    def end_current_block():
+        nonlocal current_block_type, block_has_content, thinking_chars_printed
+        if current_block_type in ("text", "thinking") and block_has_content:
+            print("", flush=True)
+        current_block_type = None
+        block_has_content = False
+        thinking_chars_printed = 0
+
     while True:
         try:
             if os.path.exists(log_file):
@@ -103,42 +127,109 @@ def cmd_stream_monitor(log_file, pid_str, done_flag=None):
                     for line in f:
                         try:
                             d = json.loads(line)
-                            t = d.get("type", "")
-                            if t == "assistant":
-                                for c in d.get("message", {}).get("content", []):
-                                    if (
-                                        c.get("type") == "text"
-                                        and c.get("text", "").strip()
-                                    ):
-                                        print(
-                                            f"  [claude] {c['text'][:120]}",
-                                            flush=True,
-                                        )
-                                    elif c.get("type") == "tool_use":
-                                        inp = c.get("input", {})
-                                        if not isinstance(inp, dict):
-                                            inp = {}
-                                        name = c.get("name", "tool_use")
-                                        desc = (
-                                            inp.get("description", "")
-                                            or inp.get("pattern", "")
-                                            or inp.get("file_path", "")
-                                            or ""
-                                        )
-                                        print(
-                                            f"  [{name}] {desc[:100]}", flush=True
-                                        )
-                            elif t == "result":
-                                s = d.get("subtype", "")
-                                print(f"  [result] {s}", flush=True)
-                                if done_flag:
-                                    try:
-                                        Path(done_flag).write_text(s)
-                                    except OSError:
-                                        pass
                         except (json.JSONDecodeError, KeyError):
-                            pass
+                            continue
+
+                        last_event_time = time.time()
+                        t = d.get("type", "")
+
+                        if t == "stream_event":
+                            saw_partials = True
+                            ev = d.get("event", {})
+                            et = ev.get("type", "")
+
+                            if et == "content_block_start":
+                                end_current_block()
+                                cb = ev.get("content_block", {})
+                                cb_type = cb.get("type", "")
+                                if cb_type == "thinking":
+                                    current_block_type = "thinking"
+                                    print("  [thinking] ", end="", flush=True)
+                                elif cb_type == "text":
+                                    current_block_type = "text"
+                                    print("  [claude] ", end="", flush=True)
+                                elif cb_type == "tool_use":
+                                    current_block_type = "tool_use"
+                                    name = cb.get("name", "tool_use")
+                                    print(f"  [{name}]", flush=True)
+
+                            elif et == "content_block_delta":
+                                delta = ev.get("delta", {})
+                                dt = delta.get("type", "")
+                                if dt == "text_delta" and current_block_type == "text":
+                                    txt = delta.get("text", "")
+                                    if txt:
+                                        print(txt, end="", flush=True)
+                                        block_has_content = True
+                                elif dt == "thinking_delta" and current_block_type == "thinking":
+                                    if thinking_chars_printed < THINKING_PREVIEW_MAX:
+                                        txt = delta.get("thinking", "")
+                                        remaining = THINKING_PREVIEW_MAX - thinking_chars_printed
+                                        chunk = txt[:remaining]
+                                        if chunk:
+                                            print(chunk, end="", flush=True)
+                                            block_has_content = True
+                                            thinking_chars_printed += len(chunk)
+                                            if thinking_chars_printed >= THINKING_PREVIEW_MAX:
+                                                print("...", end="", flush=True)
+                                # ignore input_json_delta, signature_delta
+
+                            elif et == "content_block_stop":
+                                end_current_block()
+
+                            # ignore message_start, message_delta, message_stop
+
+                        elif t == "assistant" and not saw_partials:
+                            # Fallback when partials are disabled: print per-block
+                            # summaries from the full assistant event.
+                            for c in d.get("message", {}).get("content", []):
+                                if (
+                                    c.get("type") == "text"
+                                    and c.get("text", "").strip()
+                                ):
+                                    print(
+                                        f"  [claude] {c['text'][:120]}",
+                                        flush=True,
+                                    )
+                                elif c.get("type") == "tool_use":
+                                    inp = c.get("input", {})
+                                    if not isinstance(inp, dict):
+                                        inp = {}
+                                    name = c.get("name", "tool_use")
+                                    desc = (
+                                        inp.get("description", "")
+                                        or inp.get("pattern", "")
+                                        or inp.get("file_path", "")
+                                        or ""
+                                    )
+                                    print(
+                                        f"  [{name}] {desc[:100]}", flush=True
+                                    )
+
+                        elif t == "result":
+                            end_current_block()
+                            s = d.get("subtype", "")
+                            print(f"  [result] {s}", flush=True)
+                            if done_flag:
+                                try:
+                                    Path(done_flag).write_text(s)
+                                except OSError:
+                                    pass
                     pos = f.tell()
+
+            # Heartbeat: reassure the user that Claude is still alive when
+            # no stream events have landed recently. Especially important
+            # during the long first-response window for huge decomp prompts.
+            now = time.time()
+            idle = now - last_event_time
+            if idle >= HEARTBEAT_INTERVAL and (now - last_heartbeat) >= HEARTBEAT_INTERVAL:
+                elapsed_total = int(now - start_time)
+                print(
+                    f"  [waiting] idle {int(idle)}s (total {elapsed_total}s, pid {pid} alive)",
+                    flush=True,
+                )
+                last_heartbeat = now
+
             os.kill(pid, 0)
             time.sleep(0.5)
         except ProcessLookupError:

@@ -1167,7 +1167,7 @@ ${OBS_JSON}"
         env -u CLAUDECODE -u ANTHROPIC_API_KEY claude -p \
             --model "$MODEL" \
             --permission-mode bypassPermissions \
-            --verbose --output-format stream-json \
+            --verbose --output-format stream-json --include-partial-messages \
             -w "$BRANCH_NAME" \
             "$PROMPT" > "$FUNC_STREAM_LOG" 2>&1 &
         CLAUDE_PID=$!
