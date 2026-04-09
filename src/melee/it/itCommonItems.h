@@ -1105,6 +1105,8 @@ typedef struct itMewtwoShadowball_ItemVars {
     /* ip+E28 */ s32 x54;
     /* ip+E2C */ s32 x58;
     /* ip+E30 */ s32 x5C;
+    /* ip+E34 */ s32 x60;
+    /* ip+E38 */ f32 x64;
 } itMewtwoShadowball_ItemVars;
 
 typedef struct it_279D_DatAttrs {
