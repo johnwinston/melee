@@ -213,7 +213,45 @@ bool itOldottosea_UnkMotion7_Anim(Item_GObj* gobj)
     return false;
 }
 
-/// #itOldottosea_UnkMotion7_Phys
+void itOldottosea_UnkMotion7_Phys(Item_GObj* gobj)
+{
+    Item* ip = gobj->user_data;
+    itOldottoseaAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
+    s32 jp_offset;
+
+    if (lbLang_IsSettingJP()) {
+        jp_offset = 25;
+    } else {
+        jp_offset = 25;
+    }
+
+    if (ip->xDD4_itemVar.oldottosea.x24 == jp_offset) {
+        ip->x40_vel.x = ip->facing_dir * attr->x8;
+    } else {
+        if (lbLang_IsSettingJP()) {
+            jp_offset = 25;
+        } else {
+            jp_offset = 25;
+        }
+        if (ip->xDD4_itemVar.oldottosea.x24 > jp_offset) {
+            ip->x40_vel.x += -ip->facing_dir * attr->xC;
+        }
+    }
+
+    ip->xDD4_itemVar.oldottosea.x24++;
+
+    if (ip->x40_vel.x != 0.0f) {
+        if ((u32) ip->xDD4_itemVar.oldottosea.x20 == 0) {
+            if (it_802750E8(gobj, 2)) {
+                it_802E3098(gobj);
+            }
+        }
+    }
+
+    it_8027C8D0(&ip->x40_vel, &ip->x378_itemColl.floor.normal,
+                ip->facing_dir);
+    it_8027C0A8(gobj, ip->facing_dir, 5.0f);
+}
 
 bool itOldottosea_UnkMotion7_Coll(Item_GObj* gobj)
 {

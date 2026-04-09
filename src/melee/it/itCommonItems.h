@@ -1472,6 +1472,8 @@ typedef struct itPatapataAttributes {
 typedef struct itOldottoseaAttributes {
     /* 0x00 */ s32* x0;
     /* 0x04 */ f32 x4;
+    /* 0x08 */ f32 x8;
+    /* 0x0C */ f32 xC;
 } itOldottoseaAttributes;
 
 typedef struct itFreezerAttributes {
