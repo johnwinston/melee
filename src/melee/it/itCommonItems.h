@@ -1609,7 +1609,7 @@ typedef struct itGreatFoxLaser_ItemVars {
     /* +28 ip+DFC */ Vec3 x28;
     /* +34 ip+E08 */ s16 x34;
     /* +36 ip+E0A */ s16 x36;
-    /* +38 ip+E0C */ s16 x38;
+    /* +38 ip+E0C */ UNK_T x38;
 } itGreatFoxLaser_ItemVars;
 
 typedef struct itMatadogas_ItemVars {

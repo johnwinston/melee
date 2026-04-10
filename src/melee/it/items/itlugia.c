@@ -11,6 +11,7 @@
 #include "it/it_2725.h"
 #include "it/item.h"
 #include "lb/lb_00B0.h"
+#include "lb/lbvector.h"
 
 #include <math_ppc.h>
 

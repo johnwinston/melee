@@ -3,12 +3,11 @@
 
 #include "it/forward.h"
 
+#include "it/itCharItems.h"
+#include "it/itYoyo.h"
 #include "it/items/types.h"
 
 #include <dolphin/mtx.h>
-
-typedef struct ItemLink ItemLink;
-typedef struct itYoyoAttributes itYoyoAttributes;
 
 /* 2BE598 */ void it_802BE598(Item_GObj*);
 /* 2BE5B8 */ void it_802BE5B8(Item_GObj*);

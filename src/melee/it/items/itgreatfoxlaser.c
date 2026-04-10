@@ -12,7 +12,7 @@
 
 UNK_T it_802EAF28(Item_GObj* item_gobj)
 {
-    return (UNK_T)GET_ITEM(item_gobj)->xDD4_itemVar.greatfoxlaser.x38;
+    return GET_ITEM(item_gobj)->xDD4_itemVar.greatfoxlaser.x38;
 }
 
 /// #it_802EAF34
