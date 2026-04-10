@@ -1,6 +1,8 @@
 #include "itpikachutjoltground.h"
 
+#include "db/db.h"
 #include "ef/eflib.h"
+#include "ef/efsync.h"
 #include "it/inlines.h"
 #include "it/it_266F.h"
 #include "it/it_26B1.h"
@@ -47,7 +49,46 @@ void it_802B3544(Item_GObj* gobj)
     GET_ITEM(gobj)->xDD4_itemVar.pikachujoltground.xDDC = 0;
 }
 
-/// #it_802B3554
+void it_802B3554(Item_GObj* gobj, Fighter_GObj* owner)
+{
+    Item* ip = GET_ITEM(gobj);
+    void* hsd_obj = gobj->hsd_obj;
+    itPikachutJoltGroundAttributes* attr =
+        ip->xC4_article_data->x4_specialAttributes;
+    f64 angle;
+    PAD_STACK(8);
+
+    it_8026B3A8(gobj);
+    ip->xDC8_word.flags.x13 = 0;
+    it_80272940(gobj);
+    Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
+
+    if (1.0F == ip->facing_dir) {
+        angle = attr->x4;
+    } else {
+        f32 val = attr->x4;
+        if (val < 0.0F) {
+            val = -val;
+        }
+        angle = M_PI + val;
+    }
+    ip->xDD4_itemVar.pikachujoltground.xDD4 = angle;
+
+    switch (ip->kind) {
+    case It_Kind_Pikachu_TJolt_Ground:
+    case It_Kind_Pichu_TJolt_Ground:
+        efSync_Spawn(0x4BD, gobj, hsd_obj);
+        ip->xDD4_itemVar.pikachujoltground.xDE0 = 1;
+        break;
+    case It_Kind_Kirby_PikachuTJolt_Ground:
+    case It_Kind_Kirby_PichuTJolt_Ground:
+        efSync_Spawn(0x4AD, gobj, hsd_obj);
+        ip->xDD4_itemVar.pikachujoltground.xDE0 = 1;
+        break;
+    }
+
+    db_80225DD8(gobj, owner);
+}
 
 bool itPikachutjoltground_UnkMotion0_Anim(Item_GObj* gobj)
 {
