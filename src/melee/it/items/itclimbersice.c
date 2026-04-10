@@ -307,7 +307,57 @@ void itClimbersice_UnkMotion3_Phys(Item_GObj* gobj)
     it_80272460(&ip->x5D4_hitboxes[0].hit, dmg, gobj);
 }
 
-/// #itClimbersice_UnkMotion3_Coll
+bool itClimbersice_UnkMotion3_Coll(Item_GObj* gobj)
+{
+    Item* ip;
+    itClimbersIceAttributes* sa;
+    PAD_STACK(24);
+
+    if (it_8026DAA8(gobj) & 1) {
+        HSD_JObj* child;
+        HSD_JObj* jobj = gobj->hsd_obj;
+
+        if (jobj == NULL) {
+            child = NULL;
+        } else {
+            child = jobj->child;
+        }
+
+        {
+            Item* ip = GET_ITEM(gobj);
+
+            if (ip->kind == 0x6A) {
+                f32* facing = &ip->facing_dir;
+                efAsync_Spawn(gobj, &ip->xBC0, 3, 0x4EB, child, facing);
+            } else {
+                f32* facing = &ip->facing_dir;
+                efAsync_Spawn(gobj, &ip->xBC0, 3, 0x4B0, child, facing);
+            }
+        }
+
+        Item_80268E5C(gobj, 2, ITEM_ANIM_UPDATE);
+    }
+
+    ip = GET_ITEM(gobj);
+    sa = ip->xC4_article_data->x4_specialAttributes;
+
+    if (it_80276308(gobj) != 0) {
+        f32 vel_x = ip->x40_vel.x;
+        if (vel_x < 0.0f) {
+            vel_x = -vel_x;
+        }
+        if (vel_x <= sa->xC) {
+            it_8027770C(gobj);
+            it_80272980(gobj);
+            ip = GET_ITEM(gobj);
+            sa = ip->xC4_article_data->x4_specialAttributes;
+            ip->xD44_lifeTimer -= sa->x4;
+        } else {
+            return true;
+        }
+    }
+    return false;
+}
 
 bool itClimbersIce_Logic90_DmgDealt(Item_GObj* arg0)
 {
