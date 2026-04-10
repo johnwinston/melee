@@ -78,6 +78,7 @@
 #include <stddef.h>
 #include <trigf.h>
 #include <baselib/gobj.h>
+#include <baselib/jobj.h>
 #include <baselib/random.h>
 #include <MSL/math.h>
 
@@ -3286,7 +3287,29 @@ void ftKb_SpecialN_800EEEC4(HSD_GObj* gobj, FighterKind kind)
 
 /// #ftKb_SpecialN_800EEEC4
 
-/// #ftKb_UnkMtxFunc0
+void ftKb_UnkMtxFunc0(Fighter_GObj* gobj, int arg1, Mtx mtx)
+{
+    Fighter* fp = gobj->user_data;
+
+    if (fp->fv.kb.hat.jobj == NULL) {
+        return;
+    }
+    if (!fp->x2225_b2) {
+        return;
+    }
+
+    {
+        MtxPtr bone_mtx = HSD_JObjGetMtxPtr(fp->parts[6].joint);
+        HSD_JObj* jobj = fp->fv.kb.hat.jobj;
+        HSD_JObjCopyMtx(fp->fv.kb.hat.jobj, bone_mtx);
+        jobj->flags |=
+            JOBJ_USER_DEF_MTX | JOBJ_MTX_INDEP_PARENT | JOBJ_MTX_INDEP_SRT;
+        HSD_JObjSetMtxDirty(jobj);
+        HSD_JObjDispAll(fp->fv.kb.hat.jobj, mtx,
+                        HSD_GObj_80390EB8(arg1), 0);
+    }
+    PAD_STACK(8);
+}
 
 HSD_JObj* ftKb_Init_UnkMotionStates6(Fighter_GObj* gobj)
 {
