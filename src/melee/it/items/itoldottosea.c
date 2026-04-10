@@ -78,7 +78,45 @@ bool itOldottosea_UnkMotion0_Coll(Item_GObj* gobj)
     return it_802E35CC(gobj);
 }
 
-/// #it_802E27B4
+void it_802E27B4(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    itOldottoseaAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
+    Vec3 pos;
+    int int_dir;
+
+    ip->x40_vel.z = 0.0f;
+    ip->x40_vel.y = 0.0f;
+    ip->x40_vel.x = 0.0f;
+    ip->xDD4_itemVar.oldottosea.x24 = 0;
+
+    if (-1.0f == ip->facing_dir) {
+        int_dir = -1;
+    } else {
+        int_dir = 1;
+    }
+    mpCollSetFacingDir(&ip->x378_itemColl, int_dir);
+
+    it_802756E0(gobj);
+
+    if (ip->xDD4_itemVar.oldottosea.x2C != 0) {
+        pos = ip->pos;
+        pos.x += attr->x14 * ip->facing_dir;
+        ip->xDD4_itemVar.oldottosea.x20 =
+            it_8028EB88(gobj, &pos, ip->facing_dir, attr->x24);
+        if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
+            it_8028EC98(ip->xDD4_itemVar.oldottosea.x20,
+                        ip->x40_vel.x * attr->x1C);
+        }
+        ip->xDD4_itemVar.oldottosea.x2C = 0;
+    }
+
+    if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
+        Item_80268E5C(gobj, 2, ITEM_ANIM_UPDATE);
+    } else {
+        Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
+    }
+}
 
 /// #itOldottosea_UnkMotion2_Anim
 
