@@ -542,14 +542,20 @@ typedef struct itTincle_ItemVars {
     /* +4C ip+E20 */ f32 x4C;
     /* +50 ip+E24 */ f32 x50;
     /* +54 ip+E28 */ f32 x54;
-    /* +58 ip+E2C */ u8 pad2[0x4];
+    /* +58 ip+E2C */ f32 x58;
     /* +5C ip+E30 */ f32 x5C;
     /* +60 ip+E34 */ u8 pad3[0x8];
     /* +68 ip+E3C */ itECB x68;
 } itTincle_ItemVars;
 
 typedef struct itTincleAttributes {
-    /* 0x00 */ u8 pad[0x24];
+    /* 0x00 */ u8 pad0[0x0C];
+    /* 0x0C */ f32 x0C;
+    /* 0x10 */ f32 x10;
+    /* 0x14 */ u8 pad0b[0x04];
+    /* 0x18 */ f32 x18;
+    /* 0x1C */ f32 x1C;
+    /* 0x20 */ f32 x20;
     /* 0x24 */ f32 x24;
     /* 0x28 */ s32 x28;
     /* 0x2C */ s32 x2C;

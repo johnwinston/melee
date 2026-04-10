@@ -69,7 +69,27 @@ bool itTincle_UnkMotion0_Coll(Item_GObj* gobj)
     return false;
 }
 
-/// #it_802EB870
+void it_802EB870(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    itTincleAttributes* sa = ip->xC4_article_data->x4_specialAttributes;
+    PAD_STACK(8);
+
+    ip->xDD4_itemVar.tincle.x58 =
+        sa->x0C + (s32)(ABS(sa->x10 - sa->x0C) * 0.5f);
+
+    ip->xDD4_itemVar.tincle.x5C =
+        sa->x20 + HSD_Randi((s32) ABS(sa->x1C - sa->x20));
+
+    ip->x40_vel.y = -sa->x18;
+    ip->x40_vel.x = 0.0f;
+
+    HSD_JObjClearFlagsAll(GET_JOBJ(gobj), 0x10);
+
+    Item_80268E5C(gobj, 1, 2);
+
+    it_802EC9E8(gobj);
+}
 
 bool itTincle_UnkMotion1_Anim(Item_GObj* gobj)
 {
