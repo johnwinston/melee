@@ -102,14 +102,16 @@ void mn_802308F0(HSD_GObj* gobj, int arg1, int arg2)
     case 1:
     case 3:
         if (*(HSD_Text**) (data + 0x130) == NULL) {
-            mn_802307F8(data, kind, mn_804A04F0.confirmed_selection);
+            mn_802307F8((struct mn_802307F8_t*) data, kind,
+                        mn_804A04F0.confirmed_selection);
         }
         break;
     case 0:
         if (arg1 != 0 ||
             (arg2 != 0 && (kind == 0 || kind == 2 || kind == 4)))
         {
-            mn_802307F8(data, kind, mn_804A04F0.confirmed_selection);
+            mn_802307F8((struct mn_802307F8_t*) data, kind,
+                        mn_804A04F0.confirmed_selection);
         }
         break;
     case 5:
