@@ -2138,7 +2138,51 @@ MatchEnd* fn_80165D60(MatchEnd* arg0)
 
     return arg0;
 }
-/// #fn_80165E7C
+void fn_80165E7C(MatchEnd* arg0)
+{
+    s32 i;
+
+    for (i = 0; i < 6; i++) {
+        if ((u8) arg0->player_standings[i].slot_type != 3) {
+            u8 team = arg0->player_standings[i].team;
+
+            if (gm_801A4310() == MJ_STAMINA_VS || arg0->x5 == 1) {
+                int player_score = arg0->player_standings[i].score;
+
+                if (player_score < 0) {
+                    int team_score =
+                        arg0->team_standings[team].score;
+                    if (team_score == 0) {
+                        arg0->team_standings[team].score =
+                            player_score;
+                    } else if (team_score < 0 &&
+                               team_score < player_score)
+                    {
+                        arg0->team_standings[team].score =
+                            player_score;
+                    }
+                } else {
+                    int team_score =
+                        arg0->team_standings[team].score;
+                    if (team_score < 0) {
+                        arg0->team_standings[team].score =
+                            player_score;
+                    } else {
+                        arg0->team_standings[team].score =
+                            team_score + player_score;
+                    }
+                }
+            } else {
+                arg0->team_standings[team].score +=
+                    arg0->player_standings[i].score;
+            }
+
+            arg0->team_standings[team].subscore +=
+                arg0->player_standings[i].x30;
+            arg0->team_standings[team].active = 1;
+        }
+    }
+}
 
 /// #fn_80165FA4
 
