@@ -149,6 +149,9 @@ typedef struct itKyasarin_ItemVars {
     /* +0  ip+DD4 */ char pad_0[0x20];
     /* +20 ip+DF4 */ HSD_GObj* x20;
     /* +24 ip+DF8 */ f32 x24;
+    /* +28 ip+DFC */ f32 x28;
+    /* +2C ip+E00 */ char pad_2C[0x34 - 0x2C];
+    /* +34 ip+E08 */ s32 x34;
 } itKyasarin_ItemVars;
 
 typedef struct itKyasarinAttributes {
@@ -156,11 +159,16 @@ typedef struct itKyasarinAttributes {
     /* +4  */ f32 x4;
     /* +8  */ f32 x8;
     /* +C  */ f32 xC;
-    /* +10 */ u8 x10_pad[0x28 - 0x10];
+    /* +10 */ u8 x10_pad[0x18 - 0x10];
+    /* +18 */ f32 x18;
+    /* +1C */ f32 x1C;
+    /* +20 */ u8 x20_pad[0x28 - 0x20];
     /* +28 */ f32 x28;
     /* +2C */ f32 x2C;
     /* +30 */ f32 x30;
     /* +34 */ f32 x34;
+    /* +38 */ f32 x38;
+    /* +3C */ f32 x3C;
 } itKyasarinAttributes;
 
 typedef struct itKyasarinEgg_ItemVars {
