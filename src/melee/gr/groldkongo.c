@@ -23,7 +23,16 @@ static struct {
     u8 x4[0x10];
     f32 x14;
     f32 x18;
-    u8 x1C[0x2C];
+    u8 x1C[0x10];
+    s16 x2C;
+    s16 x2E;
+    s16 x30;
+    s16 x32;
+    s16 x34;
+    s16 x36;
+    s16 x38;
+    s16 x3A;
+    u8 x3C[0xC];
     f32 x48;
     s32 x4C;
     s32 x50;
@@ -202,7 +211,66 @@ void grOldKongo_802105C8(HSD_GObj* gobj)
     }
 }
 
-/// #grOldKongo_80210650
+f32 grOldKongo_80210650(void)
+{
+    f32 result;
+    s32 total;
+    s32 r;
+
+    total = grOk_804D6A90->x2C + grOk_804D6A90->x2E + grOk_804D6A90->x30 +
+            grOk_804D6A90->x32 + grOk_804D6A90->x34 + grOk_804D6A90->x36 +
+            grOk_804D6A90->x38 + grOk_804D6A90->x3A;
+
+    if (total != 0) {
+        r = HSD_Randi(total);
+    } else {
+        r = 0;
+    }
+
+    r -= grOk_804D6A90->x2C;
+    if (r < 0) {
+        result = 2.3561945F;
+    } else {
+        r -= grOk_804D6A90->x2E;
+        if (r < 0) {
+            result = 1.5707964F;
+        } else {
+            r -= grOk_804D6A90->x30;
+            if (r < 0) {
+                result = 0.7853982F;
+            } else {
+                r -= grOk_804D6A90->x32;
+                if (r < 0) {
+                    result = 0.0F;
+                } else {
+                    r -= grOk_804D6A90->x34;
+                    if (r < 0) {
+                        result = -0.7853982F;
+                    } else {
+                        r -= grOk_804D6A90->x36;
+                        if (r < 0) {
+                            result = -1.5707964F;
+                        } else {
+                            r -= grOk_804D6A90->x38;
+                            if (r < 0) {
+                                result = -2.3561945F;
+                            } else {
+                                r -= grOk_804D6A90->x3A;
+                                if (r < 0) {
+                                    result = -3.1415927F;
+                                } else {
+                                    HSD_ASSERT(786, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return result;
+}
 
 DynamicsDesc* grOldKongo_80210780(enum_t gobj)
 {
