@@ -850,12 +850,63 @@ def cmd_draft_pr_set_status(status_file, *args):
         json.dump(entries, f, indent=2)
 
 
+def _get_active_matches(base=None, head=None):
+    """Return set of (file_basename, func_name) pairs for functions currently
+    decompiled on ``head`` but not on ``base``.
+
+    Walks each commit in ``base..head`` and parses removed ``/// #funcname``
+    stub lines from the unified diff. Returns None when git is unavailable or
+    the refs don't exist, which signals to callers that filtering should be
+    skipped and all recorded matches should be shown.
+
+    ``base`` defaults to ``$DRAFT_BASE_REF`` or ``upstream/master``.
+    ``head`` defaults to ``$DRAFT_HEAD_REF`` or ``origin/wip/pending-matches``.
+    """
+    base = base or os.environ.get("DRAFT_BASE_REF", "upstream/master")
+    head = head or os.environ.get("DRAFT_HEAD_REF", "origin/wip/pending-matches")
+    try:
+        commits_out = subprocess.run(
+            ["git", "log", "--format=%H", head, f"^{base}"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+    commits = [c for c in commits_out.strip().split("\n") if c]
+    active: set[tuple[str, str]] = set()
+    for h in commits:
+        try:
+            diff = subprocess.run(
+                ["git", "show", "--format=", "--unified=0", h],
+                capture_output=True, text=True, check=True,
+            ).stdout
+        except subprocess.CalledProcessError:
+            continue
+        file_match = re.search(r"\+\+\+ b/(src/[^\s]+\.c)", diff)
+        if not file_match:
+            continue
+        basename = os.path.basename(file_match.group(1))
+        for name_match in re.finditer(
+            r"^-\s*/// #([A-Za-z_][A-Za-z0-9_]*)", diff, re.MULTILINE,
+        ):
+            active.add((basename, name_match.group(1)))
+    return active
+
+
 def cmd_draft_pr_body(status_file):
     """Generate the draft PR body from a JSON status file.
 
     The status file is a JSON array of entries:
         {"name": "func", "file": "src/...", "status": "pending|matched|failed",
          "detail": "100%", "context": "..."}
+
+    The Matched section is filtered to the "active" set: functions whose
+    stub was removed in a commit on the draft PR branch (`wip/pending-matches`)
+    but not yet on upstream. This keeps the PR body in sync with what's
+    actually committed locally, even when draft_status.json accumulates stale
+    entries from prior runs. Override detection via DRAFT_BASE_REF /
+    DRAFT_HEAD_REF env vars; detection is skipped (falling back to showing all
+    matches) when git is unavailable.
 
     Outputs the markdown body to stdout.
     """
@@ -865,9 +916,22 @@ def cmd_draft_pr_body(status_file):
     except (FileNotFoundError, json.JSONDecodeError):
         entries = []
 
-    matched = [e for e in entries if e["status"] == "matched"]
+    matched_all = [e for e in entries if e["status"] == "matched"]
     failed = [e for e in entries if e["status"] == "failed"]
     pending = [e for e in entries if e["status"] == "pending"]
+
+    active = _get_active_matches()
+    if active is None:
+        # git unavailable: show everything as before
+        matched = matched_all
+    else:
+        matched = [
+            e for e in matched_all
+            if (
+                os.path.basename(e.get("file", "?")),
+                e["name"].rstrip(":").strip(),
+            ) in active
+        ]
 
     lines = []
     lines.append("## Progress")
@@ -892,7 +956,8 @@ def cmd_draft_pr_body(status_file):
         for e in matched:
             basename = os.path.basename(e.get("file", "?"))
             detail = e.get("detail", "100%")
-            lines.append(f"| `{basename}` | `{e['name']}` | ✓ {detail} |")
+            name = e["name"].rstrip(":").strip()
+            lines.append(f"| `{basename}` | `{name}` | ✓ {detail} |")
         lines.append("")
 
     if failed:
@@ -902,7 +967,7 @@ def cmd_draft_pr_body(status_file):
             lines.append(f"- `{e['name']}` — {detail}")
         lines.append("")
 
-    # Collect game context summaries
+    # Collect game context summaries for the active matched set only.
     contexts = {}
     for e in matched:
         ctx = e.get("context", "")
