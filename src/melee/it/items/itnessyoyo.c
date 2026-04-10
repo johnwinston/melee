@@ -3,6 +3,7 @@
 #include <placeholder.h>
 
 #include "ft/chara/ftNess/ftNs_AttackHi4.h"
+#include "ft/fighter.h"
 #include "it/inlines.h"
 #include "it/it_26B1.h"
 #include "it/item.h"
@@ -93,7 +94,43 @@ void itNessyoyo_UnkMotion2_Phys(Item_GObj* gobj)
     it_802BFAFC(ip, &pos);
 }
 
-/// #itNessyoyo_UnkMotion3_Phys
+void itNessyoyo_UnkMotion3_Phys(Item_GObj* gobj)
+{
+    Vec3 pos;
+    Vec3 zero_vec;
+    f32 pad[1];
+    Mtx m;
+    Item* ip = GET_ITEM(gobj);
+    itYoyoAttributes* attrs = ip->xC4_article_data->x4_specialAttributes;
+    ItemLink* link2 = (ItemLink*) ip->xDD4_itemVar.samusgrapple.xC;
+
+    PSMTXIdentity(m);
+    m[0][3] = 0.0F;
+    m[1][3] = 0.0F;
+    m[2][3] = 0.0F;
+    HSD_JObjSetupMatrix(link2->jobj);
+    PSMTXConcat(link2->jobj->mtx, m, m);
+    pos.x = m[0][3];
+    pos.y = m[1][3];
+    pos.z = m[2][3];
+    if (it_802BF800(link2, &pos, attrs, ip,
+                    ip->xDD4_itemVar.foxillusion.xDD8) != 0)
+    {
+        zero_vec.z = 0.0F;
+        zero_vec.y = 0.0F;
+        zero_vec.x = 0.0F;
+        it_802C0010(gobj, &zero_vec);
+        {
+            HSD_GObj* owner =
+                (HSD_GObj*) ip->xDD4_itemVar.samusgrapple.unk_10;
+            ItemLink* link1 =
+                (ItemLink*) ip->xDD4_itemVar.samusgrapple.x8;
+            Fighter* fp = owner->user_data;
+            link1->pos = fp->fv.ns.yoyo_hitbox_pos;
+        }
+    }
+    it_802BFAFC(ip, &pos);
+}
 
 /// #itNessyoyo_UnkMotion3_Anim
 

@@ -24,7 +24,7 @@
 /* 2BF180 */ UNK_RET it_802BF180(UNK_PARAMS);
 /* 2BF28C */ UNK_RET it_802BF28C(UNK_PARAMS);
 /* 2BF4A0 */ void it_802BF4A0(ItemLink*, Vec3*, itYoyoAttributes*, Item*);
-/* 2BF800 */ UNK_RET it_802BF800(UNK_PARAMS);
+/* 2BF800 */ s32 it_802BF800(ItemLink*, Vec3*, itYoyoAttributes*, Item*, f32);
 /* 2BF900 */ void it_802BF900(Item* item);
 /* 2BFAFC */ void it_802BFAFC(Item*, Vec3*);
 /* 2BFE34 */ void itNessYoyo_Logic59_PickedUp(Item_GObj*);
