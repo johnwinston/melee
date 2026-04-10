@@ -422,7 +422,35 @@ void it_802DF9F8(Item_GObj* gobj)
     Item_80268E5C((HSD_GObj*) gobj, 0xA, ITEM_ANIM_UPDATE);
 }
 
-/// #itZrshell_UnkMotion10_Anim
+bool itZrshell_UnkMotion10_Anim(Item_GObj* gobj)
+{
+    Item* ip = gobj->user_data;
+    PAD_STACK(16);
+    if (!it_80272C6C(gobj) && ip->ground_or_air == GA_Ground) {
+        if (!it_80277040(gobj)) {
+            ip = gobj->user_data;
+            it_8026B390(gobj);
+            it_80275444(gobj);
+            it_802754D4(gobj);
+            it_802756E0(gobj);
+            ip->x40_vel.x = ip->x40_vel.y = ip->x40_vel.z = 0.0f;
+            ip->xDD4_itemVar.zgshell.xE0C = 0;
+            Item_80268E5C((HSD_GObj*) gobj, 0, ITEM_ANIM_UPDATE);
+            ip->xDD4_itemVar.zgshell.xE1C_b0 = 0;
+            it_80274CAC(gobj);
+            ip->jumped_on = fn_802DFE7C;
+        } else {
+            ip = gobj->user_data;
+            if (ip->msid != 0xB && ip->msid != 0xA) {
+                it_802DFFA0(gobj);
+                ip->xDD4_itemVar.zgshell.xE1C_b0 = 0;
+                ip->xDC8_word.flags.x1F = 1;
+                Item_80268E5C((HSD_GObj*) gobj, 9, ITEM_ANIM_UPDATE);
+            }
+        }
+    }
+    return false;
+}
 
 void itZrshell_UnkMotion10_Phys(Item_GObj* gobj)
 {
