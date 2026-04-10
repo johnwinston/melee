@@ -11,9 +11,6 @@
 #include "it/it_2725.h"
 #include "it/item.h"
 #include "lb/lb_00B0.h"
-#include "lb/lbvector.h"
-
-#include <math_ppc.h>
 
 void it_2725_Logic17_Spawned(Item_GObj* gobj)
 {
@@ -308,36 +305,7 @@ Item_GObj* it_802D1E8C(Item_GObj* gobj, ItemKind kind, f32 param)
     return Item_80268B18(&spawn);
 }
 
-Vec3 it_802D1F64(Item_GObj* gobj, f32 scale)
-{
-    Item* ip = GET_ITEM(gobj);
-    Vec3 diff;
-    f32 dx, dy, dz;
-    f32 dist;
-    f32 ratio;
-    PAD_STACK(4);
-
-    it_802D208C(gobj);
-
-    lbVector_Diff(&ip->xDD4_itemVar.lugia.x8C, &ip->xDD4_itemVar.lugia.x70,
-                  &diff);
-
-    dx = ip->xDD4_itemVar.lugia.x8C.x - ip->xDD4_itemVar.lugia.x70.x;
-    dy = ip->xDD4_itemVar.lugia.x8C.y - ip->xDD4_itemVar.lugia.x70.y;
-    dz = ip->xDD4_itemVar.lugia.x8C.z - ip->xDD4_itemVar.lugia.x70.z;
-
-    dx *= dx;
-    dy *= dy;
-    dz *= dz;
-    dist = sqrtf(dx + dy + dz);
-
-    ratio = dist / scale;
-    diff.x /= ratio;
-    diff.y /= ratio;
-    diff.z /= ratio;
-
-    return diff;
-}
+/// #it_802D1F64
 
 /// #it_802D208C
 
