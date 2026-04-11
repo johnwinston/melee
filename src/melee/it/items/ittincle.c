@@ -46,50 +46,7 @@ bool itTincle_Logic13_DmgDealt(Item_GObj* gobj)
     return false;
 }
 
-extern const f32 it_804DD8B8;
-double const it_804DD8C0 = S32_TO_F32;
-
-void it_802EB6DC(Item_GObj* gobj)
-{
-    Item* ip = GET_ITEM(gobj);
-    itTincleAttributes* sa = ip->xC4_article_data->x4_specialAttributes;
-    s32 range;
-    PAD_STACK(16);
-
-    {
-        s32 rand_val = HSD_Randi((s32) ABS(sa->x10 - sa->xC));
-        ip->pos.x = sa->xC + (f32) rand_val;
-    }
-    ip->pos.y = sa->x14;
-    ip->pos.z = it_804DD8B8;
-
-    it_802762BC(ip);
-
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
-
-    range = sa->x4 - sa->x8;
-    if (range < 0) {
-        range = -range;
-    }
-    ip->xDD4_itemVar.tincle.x20 = HSD_Randi(range);
-
-    ip->xDD4_itemVar.tincle.x24 = 0;
-    ip->xDD4_itemVar.tincle.x28 = 0;
-    ip->xDD4_itemVar.tincle.x2C = 0;
-    ip->xDD4_itemVar.tincle.x34 = 0.0f;
-    ip->xDD4_itemVar.tincle.x38 = 0.0f;
-    ip->xDD4_itemVar.tincle.x4C = 0.0f;
-
-    it_802756D0(gobj);
-
-    HSD_JObjSetFlagsAll(GET_JOBJ(gobj), 0x10);
-
-    Item_80268E5C(gobj, 0, 2);
-
-    it_802EC9E8(gobj);
-}
+/// #it_802EB6DC
 
 bool itTincle_UnkMotion0_Anim(Item_GObj* gobj)
 {
