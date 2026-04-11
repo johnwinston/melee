@@ -80,28 +80,28 @@ void mn_802307F8(struct mn_802307F8_t* data, s32 mode, s32 index)
 
 void mn_802308F0(HSD_GObj* gobj, int arg1, int arg2)
 {
-    u8* data = HSD_GObjGetUserData(gobj);
+    struct mn_802307F8_t* data = HSD_GObjGetUserData(gobj);
     u16 sel;
     u8 kind;
 
     if (arg1 != 0) {
         sel = mn_804A04F0.hovered_selection;
     } else {
-        sel = data[1];
+        sel = data->x1;
     }
     kind = sel;
 
-    switch (data[0xA]) {
+    switch (data->xA) {
     case 2:
     case 4:
-        if (*(HSD_Text**) (data + 0x130) != NULL) {
-            HSD_SisLib_803A5CC4(*(HSD_Text**) (data + 0x130));
-            *(HSD_Text**) (data + 0x130) = NULL;
+        if (data->text != NULL) {
+            HSD_SisLib_803A5CC4(data->text);
+            data->text = NULL;
         }
         break;
     case 1:
     case 3:
-        if (*(HSD_Text**) (data + 0x130) == NULL) {
+        if (data->text == NULL) {
             mn_802307F8((struct mn_802307F8_t*) data, kind,
                         mn_804A04F0.confirmed_selection);
         }
