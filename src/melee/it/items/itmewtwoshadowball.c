@@ -182,7 +182,20 @@ void fn_802C5E18(Item_GObj* gobj)
 
 /// #it_802C5E5C
 
-/// #itMewtwoshadowball_UnkMotion17_Anim
+bool itMewtwoshadowball_UnkMotion17_Anim(Item_GObj* gobj)
+{
+    Item* ip = gobj->user_data;
+    HSD_JObj* jobj = itGetJObjGrandchild(gobj);
+    UNUSED u8 _[8];
+    Vec3 scale;
+    scale.x = scale.y = scale.z = ip->xDD4_itemVar.mewtwoshadowball.x10;
+    HSD_JObjSetScale(jobj, &scale);
+    if (ip->x5D4_hitboxes[0].hit.state != 0) {
+        ip->x5D4_hitboxes[0].hit.scale =
+            ip->xDD4_itemVar.mewtwoshadowball.x64;
+    }
+    return it_80273130(gobj);
+}
 
 void itMewtwoshadowball_UnkMotion17_Phys(Item_GObj* gobj)
 {

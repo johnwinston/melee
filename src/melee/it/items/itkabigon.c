@@ -136,7 +136,23 @@ void it_802CA014(Item_GObj* gobj)
     }
 }
 
-/// #it_802CA074
+void it_802CA074(Item_GObj* gobj)
+{
+    HSD_JObj* jobj = HSD_GObjGetHSDObj(gobj);
+    Item* ip = GET_ITEM(gobj);
+    Vec3 scale;
+
+    HSD_JObjSetFlagsAll(jobj, 0x10);
+    Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
+    ip->entered_hitlag = efLib_PauseAll;
+    ip->exited_hitlag = efLib_ResumeAll;
+    ip->x40_vel.y = 0.0F;
+    scale.z = ip->xDD4_itemVar.kabigon.x68;
+    scale.y = ip->xDD4_itemVar.kabigon.x68;
+    scale.x = ip->xDD4_itemVar.kabigon.x68;
+    HSD_JObjSetScale(jobj, &scale);
+    Item_8026AE84(ip, 0x2724, 0x7F, 0x40);
+}
 
 /// #itKabigon_UnkMotion1_Anim
 

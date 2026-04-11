@@ -13,7 +13,7 @@
 /* 2B338C */ void it_802B338C(Item_GObj*, Vec3*, float facing_dir, u32);
 /* 2B34E4 */ void it_2725_Logic106_Destroyed(Item_GObj*);
 /* 2B3544 */ void it_802B3544(Item_GObj* gobj);
-/* 2B3554 */ UNK_RET it_802B3554(UNK_PARAMS);
+/* 2B3554 */ void it_802B3554(Item_GObj* gobj, Fighter_GObj* owner);
 /* 2B3680 */ bool itPikachutjoltground_UnkMotion0_Anim(Item_GObj* gobj);
 /* 2B36BC */ bool itPikachutjoltground_UnkMotion1_Anim(Item_GObj* gobj);
 /* 2B3790 */ void itPikachutjoltground_UnkMotion0_Phys(Item_GObj* gobj);

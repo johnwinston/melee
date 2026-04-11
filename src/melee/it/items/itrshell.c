@@ -40,13 +40,15 @@ void it_8028CFE0(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
     itRShell_Attrs* attrs = ip->xC4_article_data->x4_specialAttributes;
+    f32 temp;
     Vec v;
     HSD_JObj* jobj;
     PAD_STACK(4);
     if (ip->xDD4_itemVar.rshell.xDDC <= 0.0f) {
         jobj = GET_JOBJ(gobj);
         v = attrs->x48;
-        v.x *= -ip->facing_dir;
+        temp = -ip->facing_dir;
+        v.x *= temp;
         efAsync_Spawn(gobj, &GET_ITEM(gobj)->xBC0, 2, 1029, jobj, &v);
         ip->xDD4_itemVar.rshell.xDDC = attrs->x44;
     } else {
@@ -439,7 +441,25 @@ bool itRshell_UnkMotion4_Coll(Item_GObj* gobj)
 
 /// #it_8028DAE4
 
-/// #itRshell_UnkMotion5_Anim
+bool itRshell_UnkMotion5_Anim(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    if (ip->xDD4_itemVar.rshell.xDD4 <= 0.0f) {
+        return true;
+    }
+    ip->xDD4_itemVar.rshell.xDD4 -= 1.0f;
+    if (ip->xDD4_itemVar.rshell.xDD8 <= 0.0f) {
+        if (!ip->xDCD_flag.b5) {
+            it_80275444(gobj);
+        }
+    } else {
+        ip->xDD4_itemVar.rshell.xDD8 -= 1.0f;
+    }
+    if (ip->msid == 5) {
+        it_8028CFE0(gobj);
+    }
+    return false;
+}
 
 /// #itRshell_UnkMotion5_Phys
 

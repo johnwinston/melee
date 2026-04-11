@@ -3,7 +3,12 @@
 #include "it/inlines.h"
 #include "it/it_26B1.h"
 #include "it/it_2725.h"
+#include "it/itcoll.h"
 #include "it/item.h"
+
+#include "lb/lb_00B0.h"
+
+#include <Runtime/runtime.h>
 
 UNK_T it_802EAF28(Item_GObj* item_gobj)
 {
