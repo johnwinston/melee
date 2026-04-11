@@ -78,6 +78,9 @@ bool itOldottosea_UnkMotion0_Coll(Item_GObj* gobj)
     return it_802E35CC(gobj);
 }
 
+extern const f32 it_804DD73C;
+extern const f32 it_804DD728;
+
 void it_802E27B4(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
@@ -85,12 +88,12 @@ void it_802E27B4(Item_GObj* gobj)
     Vec3 pos;
     int int_dir;
 
-    ip->x40_vel.z = 0.0f;
-    ip->x40_vel.y = 0.0f;
-    ip->x40_vel.x = 0.0f;
+    ip->x40_vel.z = it_804DD73C;
+    ip->x40_vel.y = it_804DD73C;
+    ip->x40_vel.x = it_804DD73C;
     ip->xDD4_itemVar.oldottosea.x24 = 0;
 
-    if (-1.0f == ip->facing_dir) {
+    if (it_804DD728 == ip->facing_dir) {
         int_dir = -1;
     } else {
         int_dir = 1;
@@ -102,10 +105,10 @@ void it_802E27B4(Item_GObj* gobj)
     if (ip->xDD4_itemVar.oldottosea.x2C != 0) {
         pos = ip->pos;
         pos.x += attr->x14 * ip->facing_dir;
-        ip->xDD4_itemVar.oldottosea.x20 =
+        ip->xDD4_itemVar.oldottosea.x20 = (s32)
             it_8028EB88(gobj, &pos, ip->facing_dir, attr->x24);
         if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
-            it_8028EC98(ip->xDD4_itemVar.oldottosea.x20,
+            it_8028EC98((Item_GObj*) ip->xDD4_itemVar.oldottosea.x20,
                         ip->x40_vel.x * attr->x1C);
         }
         ip->xDD4_itemVar.oldottosea.x2C = 0;

@@ -46,6 +46,9 @@ bool itTincle_Logic13_DmgDealt(Item_GObj* gobj)
     return false;
 }
 
+extern const f32 it_804DD8B8;
+double const it_804DD8C0 = S32_TO_F32;
+
 void it_802EB6DC(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);
@@ -58,7 +61,7 @@ void it_802EB6DC(Item_GObj* gobj)
         ip->pos.x = sa->xC + (f32) rand_val;
     }
     ip->pos.y = sa->x14;
-    ip->pos.z = 2.0f;
+    ip->pos.z = it_804DD8B8;
 
     it_802762BC(ip);
 

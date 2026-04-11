@@ -94,6 +94,8 @@ void itNessyoyo_UnkMotion2_Phys(Item_GObj* gobj)
     it_802BFAFC(ip, &pos);
 }
 
+extern const f32 it_804DD150;
+
 void itNessyoyo_UnkMotion3_Phys(Item_GObj* gobj)
 {
     Vec3 pos;
@@ -105,9 +107,9 @@ void itNessyoyo_UnkMotion3_Phys(Item_GObj* gobj)
     ItemLink* link2 = (ItemLink*) ip->xDD4_itemVar.samusgrapple.xC;
 
     PSMTXIdentity(m);
-    m[0][3] = 0.0F;
-    m[1][3] = 0.0F;
-    m[2][3] = 0.0F;
+    m[0][3] = it_804DD150;
+    m[1][3] = it_804DD150;
+    m[2][3] = it_804DD150;
     HSD_JObjSetupMatrix(link2->jobj);
     PSMTXConcat(link2->jobj->mtx, m, m);
     pos.x = m[0][3];
@@ -116,9 +118,9 @@ void itNessyoyo_UnkMotion3_Phys(Item_GObj* gobj)
     if (it_802BF800(link2, &pos, attrs, ip,
                     ip->xDD4_itemVar.foxillusion.xDD8) != 0)
     {
-        zero_vec.z = 0.0F;
-        zero_vec.y = 0.0F;
-        zero_vec.x = 0.0F;
+        zero_vec.z = it_804DD150;
+        zero_vec.y = it_804DD150;
+        zero_vec.x = it_804DD150;
         it_802C0010(gobj, &zero_vec);
         {
             HSD_GObj* owner =
