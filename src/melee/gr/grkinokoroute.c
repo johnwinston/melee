@@ -162,29 +162,7 @@ void grKinokoRoute_80207B30(HSD_GObj* gobj)
     ftCo_800C07F8(gobj, 6, grKinokoRoute_80208660);
 }
 
-/// @todo Currently 90.4% match - HSD_JObjGetTranslation inline hoists dest
-/// pointer to r29 (target uses r0 for addic. + r29+offset for stores)
-void grKinokoRoute_80207B5C(Ground_GObj* gobj)
-{
-    Ground* gp = GET_GROUND(gobj);
-    HSD_JObj* jobj;
-
-    Ground_801C2ED0(gobj->hsd_obj, gp->map_id);
-    grAnime_801C8138(gobj, gp->map_id, 0);
-    gp->x8_callback = NULL;
-    gp->xC_callback = NULL;
-    gp->x10_flags.b5 = 1;
-    *(s16*) ((u8*) gp + 0xC6) = 0;
-    *(s16*) ((u8*) gp + 0xCA) = 0;
-    *(s16*) ((u8*) gp + 0xCC) = 0;
-    *(s16*) ((u8*) gp + 0xC8) = -1;
-    Ground_801C10B8(gobj, grKinokoRoute_80207B30);
-    grKinokoRoute_80208564(gobj);
-    ((UnkFlagStruct*) ((u8*) gp + 0xC4))->b0 = 1;
-    jobj = Ground_801C2CF4(4);
-    HSD_ASSERT(467, jobj != NULL);
-    HSD_JObjGetTranslation(jobj, (Vec3*) ((u8*) gp + 0xD0));
-}
+/// #grKinokoRoute_80207B5C
 
 bool grKinokoRoute_80207C80(Ground_GObj* arg)
 {
