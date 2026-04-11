@@ -108,28 +108,7 @@ bool itKlap_UnkMotion2_Anim(Item_GObj* gobj)
     return false;
 }
 
-void itKlap_UnkMotion2_Phys(Item_GObj* gobj)
-{
-    Item* ip = GET_ITEM(gobj);
-    HSD_JObj* jobj = GET_JOBJ(gobj);
-    f32 rx;
-    f32 diff;
-
-    ip->x40_vel.y -= ip->xCC_item_attr->x10_fall_speed;
-
-    rx = HSD_JObjGetRotationX(jobj);
-    diff = 1.5707964f - rx;
-
-    if (diff > 0.034906585f) {
-        rx += 0.034906585f;
-    } else if (diff < -0.034906585f) {
-        rx -= 0.034906585f;
-    } else {
-        rx = 1.5707964f;
-    }
-
-    HSD_JObjSetRotationX(jobj, rx);
-}
+/// #itKlap_UnkMotion2_Phys
 
 bool itKlap_UnkMotion2_Coll(Item_GObj* gobj)
 {

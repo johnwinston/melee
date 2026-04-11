@@ -282,16 +282,19 @@ bool it_802CAE60(Item_GObj* gobj)
     return false;
 }
 
+extern const f64 it_804DD358;
+extern const f64 it_804DD360;
+
 void it_802CAE94(Item_GObj* gobj)
 {
     HSD_JObj* jobj = HSD_GObjGetHSDObj(gobj);
 
-    if (jobj->scale.x < 1.0) {
+    if (jobj->scale.x < it_804DD358) {
         Vec3 scale;
         HSD_JObjGetScale(jobj, &scale);
-        scale.x += 0.06;
-        scale.y += 0.06;
-        scale.z += 0.06;
+        scale.x += it_804DD360;
+        scale.y += it_804DD360;
+        scale.z += it_804DD360;
         HSD_JObjSetScale(jobj, &scale);
     }
 }

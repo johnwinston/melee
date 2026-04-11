@@ -183,30 +183,7 @@ void it_802ED774(HSD_GObj* gobj)
     Item_80268E5C(gobj, 7, ITEM_ANIM_UPDATE);
 }
 
-bool itKyasarin_UnkMotion7_Anim(Item_GObj* gobj)
-{
-    Item* ip = GET_ITEM(gobj);
-    if (!it_80272C6C(gobj)) {
-        itKyasarinAttributes* attr =
-            ip->xC4_article_data->x4_specialAttributes;
-        Vec3 pos;
-        f32 unused;
-        pos = ip->pos;
-        pos.x += attr->x38 * ip->facing_dir;
-        pos.y += attr->x3C;
-        pos.z = 0.0F;
-        it_802EFA44(gobj, (Vec*) &pos, ip->facing_dir);
-        ip->xDD4_itemVar.kyasarin.x34--;
-        if (ip->xDD4_itemVar.kyasarin.x34 <= 0) {
-            ip->xDD4_itemVar.kyasarin.x28 =
-                attr->x18 + HSD_Randi((s32) attr->x1C);
-            Item_80268E5C(gobj, 6, ITEM_ANIM_UPDATE);
-        } else {
-            Item_80268E5C(gobj, 7, ITEM_ANIM_UPDATE);
-        }
-    }
-    return false;
-}
+/// #itKyasarin_UnkMotion7_Anim
 
 void it_802ED8BC(HSD_GObj* gobj)
 {

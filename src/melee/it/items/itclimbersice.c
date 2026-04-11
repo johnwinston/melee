@@ -82,56 +82,7 @@ void it_2725_Logic90_Destroyed(Item_GObj* gobj)
     ip->xDD4_itemVar.climbersice.x0 = NULL;
 }
 
-bool it_802C1854(Item_GObj* gobj)
-{
-    Item* ip = GET_ITEM(gobj);
-    bool result = false;
-    CollData* coll = &ip->x378_itemColl;
-    itClimbersIceAttributes* sa = ip->xC4_article_data->x4_specialAttributes;
-
-    if (coll->env_flags & 0x18000) {
-        f32 normal_x = coll->floor.normal.x;
-        s32 sign_normal;
-        s32 sign_vel;
-        f32 accel;
-
-        if (normal_x < 0.0f) {
-            sign_normal = -1;
-        } else {
-            sign_normal = 1;
-        }
-
-        if (ip->x40_vel.x < 0.0f) {
-            sign_vel = -1;
-        } else {
-            sign_vel = 1;
-        }
-
-        if (sign_vel != sign_normal) {
-            accel = sa->x1C * (normal_x * sa->x14);
-        } else {
-            accel = sa->x18 * (normal_x * sa->x14);
-        }
-
-        ip->x40_vel.x += accel;
-
-        {
-            f32 abs_vel = ip->x40_vel.x;
-            if (abs_vel < 0.0f) {
-                abs_vel = -abs_vel;
-            }
-            if (abs_vel < sa->x24) {
-                it_8026BD84(gobj);
-                it_8026BD6C(gobj);
-                it_802C1950(gobj);
-                efLib_DestroyAll(gobj);
-                result = true;
-            }
-        }
-    }
-
-    return result;
-}
+/// #it_802C1854
 
 void it_802C1950(Item_GObj* gobj)
 {
@@ -307,57 +258,7 @@ void itClimbersice_UnkMotion3_Phys(Item_GObj* gobj)
     it_80272460(&ip->x5D4_hitboxes[0].hit, dmg, gobj);
 }
 
-bool itClimbersice_UnkMotion3_Coll(Item_GObj* gobj)
-{
-    Item* ip;
-    itClimbersIceAttributes* sa;
-    PAD_STACK(24);
-
-    if (it_8026DAA8(gobj) & 1) {
-        HSD_JObj* child;
-        HSD_JObj* jobj = gobj->hsd_obj;
-
-        if (jobj == NULL) {
-            child = NULL;
-        } else {
-            child = jobj->child;
-        }
-
-        {
-            Item* ip = GET_ITEM(gobj);
-
-            if (ip->kind == 0x6A) {
-                f32* facing = &ip->facing_dir;
-                efAsync_Spawn(gobj, &ip->xBC0, 3, 0x4EB, child, facing);
-            } else {
-                f32* facing = &ip->facing_dir;
-                efAsync_Spawn(gobj, &ip->xBC0, 3, 0x4B0, child, facing);
-            }
-        }
-
-        Item_80268E5C(gobj, 2, ITEM_ANIM_UPDATE);
-    }
-
-    ip = GET_ITEM(gobj);
-    sa = ip->xC4_article_data->x4_specialAttributes;
-
-    if (it_80276308(gobj) != 0) {
-        f32 vel_x = ip->x40_vel.x;
-        if (vel_x < 0.0f) {
-            vel_x = -vel_x;
-        }
-        if (vel_x <= sa->xC) {
-            it_8027770C(gobj);
-            it_80272980(gobj);
-            ip = GET_ITEM(gobj);
-            sa = ip->xC4_article_data->x4_specialAttributes;
-            ip->xD44_lifeTimer -= sa->x4;
-        } else {
-            return true;
-        }
-    }
-    return false;
-}
+/// #itClimbersice_UnkMotion3_Coll
 
 bool itClimbersIce_Logic90_DmgDealt(Item_GObj* arg0)
 {
