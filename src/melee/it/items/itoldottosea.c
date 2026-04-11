@@ -3,15 +3,18 @@
 #include <placeholder.h>
 #include <platform.h>
 
+#include "cm/camera.h"
 #include "it/inlines.h"
 #include "it/it_266F.h"
 #include "it/it_26B1.h"
 #include "it/it_2725.h"
 #include "it/itCommonItems.h"
 #include "it/item.h"
+#include "it/items/itfreeze.h"
 #include "it/items/itwhitebea.h"
 #include "lb/lblanguage.h"
 #include "mp/mpcoll.h"
+#include "sysdolphin/baselib/random.h"
 
 /// #it_802E2470
 
@@ -49,7 +52,48 @@ bool itOldottosea_UnkMotion0_Coll(Item_GObj* gobj)
     return it_802E35CC(gobj);
 }
 
-/// #it_802E27B4
+extern const f32 it_804DD73C;
+extern const f32 it_804DD728;
+
+void it_802E27B4(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    itOldottoseaAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
+    Vec3 pos;
+    int int_dir;
+
+    ip->x40_vel.z = it_804DD73C;
+    ip->x40_vel.y = it_804DD73C;
+    ip->x40_vel.x = it_804DD73C;
+    ip->xDD4_itemVar.oldottosea.x24 = 0;
+
+    if (it_804DD728 == ip->facing_dir) {
+        int_dir = -1;
+    } else {
+        int_dir = 1;
+    }
+    mpCollSetFacingDir(&ip->x378_itemColl, int_dir);
+
+    it_802756E0(gobj);
+
+    if (ip->xDD4_itemVar.oldottosea.x2C != 0) {
+        pos = ip->pos;
+        pos.x += attr->x14 * ip->facing_dir;
+        ip->xDD4_itemVar.oldottosea.x20 = (s32)
+            it_8028EB88(gobj, &pos, ip->facing_dir, attr->x24);
+        if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
+            it_8028EC98((Item_GObj*) ip->xDD4_itemVar.oldottosea.x20,
+                        ip->x40_vel.x * attr->x1C);
+        }
+        ip->xDD4_itemVar.oldottosea.x2C = 0;
+    }
+
+    if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0) {
+        Item_80268E5C(gobj, 2, ITEM_ANIM_UPDATE);
+    } else {
+        Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
+    }
+}
 
 /// #itOldottosea_UnkMotion2_Anim
 

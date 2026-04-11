@@ -188,7 +188,7 @@ bool itClimbersice_UnkMotion2_Anim(Item_GObj* gobj)
 
 void itClimbersice_UnkMotion2_Phys(Item_GObj* gobj)
 {
-    if (it_802C1854()) {
+    if (it_802C1854(gobj)) {
         Item* ip = GET_ITEM(gobj);
         itClimbersIceAttributes* sa =
             ip->xC4_article_data->x4_specialAttributes;

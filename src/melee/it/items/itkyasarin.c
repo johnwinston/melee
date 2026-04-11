@@ -7,6 +7,10 @@
 #include "it/itCommonItems.h"
 #include "it/item.h"
 
+#include "it/items/itkyasarinegg.h"
+
+#include <baselib/random.h>
+
 void itKyasarin_Logic25_Destroyed(Item_GObj* gobj)
 {
     Item* ip = GET_ITEM(gobj);

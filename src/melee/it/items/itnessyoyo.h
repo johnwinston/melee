@@ -3,6 +3,8 @@
 
 #include "it/forward.h"
 
+#include "it/itCharItems.h"
+#include "it/itYoyo.h"
 #include "it/items/types.h"
 
 #include <dolphin/mtx.h>
@@ -21,10 +23,10 @@
 /* 2BF030 */ UNK_RET it_802BF030(UNK_PARAMS);
 /* 2BF180 */ UNK_RET it_802BF180(UNK_PARAMS);
 /* 2BF28C */ UNK_RET it_802BF28C(UNK_PARAMS);
-/* 2BF4A0 */ UNK_RET it_802BF4A0(UNK_PARAMS);
-/* 2BF800 */ UNK_RET it_802BF800(UNK_PARAMS);
+/* 2BF4A0 */ void it_802BF4A0(ItemLink*, Vec3*, itYoyoAttributes*, Item*);
+/* 2BF800 */ s32 it_802BF800(ItemLink*, Vec3*, itYoyoAttributes*, Item*, f32);
 /* 2BF900 */ void it_802BF900(Item* item);
-/* 2BFAFC */ UNK_RET it_802BFAFC(UNK_PARAMS);
+/* 2BFAFC */ void it_802BFAFC(Item*, Vec3*);
 /* 2BFE34 */ void itNessYoyo_Logic59_PickedUp(Item_GObj*);
 /* 2BFE5C */ void it_802BFE5C(Item_GObj*, Vec3*, float);
 /* 2BFEC4 */ void it_802BFEC4(void*);

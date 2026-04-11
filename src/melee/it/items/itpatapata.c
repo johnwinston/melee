@@ -323,4 +323,36 @@ void it_802E16D8(Item_GObj* gobj, Item_GObj* ref_gobj)
     it_8026B894(gobj, ref_gobj);
 }
 
-/// #it_802E16F8
+extern Vec3 it_803B8708;
+
+Item_GObj* it_802E16F8(s32 arg0, Vec3* pos, s32 facing)
+{
+    Item* ip;
+    s32 coll_facing;
+    Vec3 vel = it_803B8708;
+    Item_GObj* gobj = it_8027B5B0(0xD4, pos, NULL, &vel, 1);
+    PAD_STACK(8);
+
+    if (gobj != NULL) {
+        ip = GET_ITEM(gobj);
+        ip->facing_dir = (f32) facing;
+        it_8027C56C(gobj, ip->facing_dir);
+        if (ip->facing_dir == -1.0f) {
+            coll_facing = -1;
+        } else {
+            coll_facing = 1;
+        }
+        mpCollSetFacingDir(&ip->x378_itemColl, coll_facing);
+        ip->xDD4_itemVar.patapata.x40 = arg0;
+        if (ip->xDD4_itemVar.patapata.x40 < 2) {
+            Item_80268E5C(gobj, 0, 2);
+            HSD_JObjAnimAll(gobj->hsd_obj);
+        }
+        it_8027CAD8(gobj);
+        ip = GET_ITEM(gobj);
+        Item_80268E5C(gobj, 1, 2);
+        it_80274CAC(gobj);
+        ip->jumped_on = it_802E0F1C;
+    }
+    return gobj;
+}

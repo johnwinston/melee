@@ -67,7 +67,41 @@ bool itKirbycutterbeam_UnkMotion0_Anim(Item_GObj* gobj)
     return it_80273130(gobj);
 }
 
-/// #itKirbycutterbeam_UnkMotion0_Phys
+void itKirbycutterbeam_UnkMotion0_Phys(Item_GObj* gobj)
+{
+    f32* attr;
+    Item* ip = GET_ITEM(gobj);
+    HSD_JObj* child = HSD_JObjGetChild(GET_JOBJ(gobj));
+
+    attr = ip->xC4_article_data->x4_specialAttributes;
+
+    ip->xDD4_itemVar.kirbycutterbeam.init_pos = ip->pos;
+
+    ip->x40_vel.x = ip->facing_dir *
+                     (ip->xDD4_itemVar.kirbycutterbeam.speed *
+                      cosf(ip->xDD4_itemVar.kirbycutterbeam.angle));
+    ip->x40_vel.y = -ip->xDD4_itemVar.kirbycutterbeam.speed *
+                     sinf(ip->xDD4_itemVar.kirbycutterbeam.angle);
+
+    if (ip->ground_or_air == GA_Ground && ip->x40_vel.y < 0.0F) {
+        ip->x40_vel.y += 0.05F * ip->x40_vel.y;
+    }
+
+    ip->x40_vel.z = 0.0F;
+
+    ip->xDD4_itemVar.kirbycutterbeam.speed -= attr[3];
+    if (ip->xDD4_itemVar.kirbycutterbeam.speed < 0.01F) {
+        ip->xDD4_itemVar.kirbycutterbeam.speed = 0.01F;
+    }
+
+    if (ip->xD44_lifeTimer <= 5.0F) {
+        HSD_JObjSetFlagsAll(child, JOBJ_HIDDEN);
+    } else {
+        HSD_JObjClearFlagsAll(child, JOBJ_HIDDEN);
+    }
+
+    PAD_STACK(8);
+}
 
 /// #itKirbycutterbeam_UnkMotion0_Coll
 

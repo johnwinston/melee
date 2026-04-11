@@ -78,7 +78,46 @@ void mn_802307F8(struct mn_802307F8_t* data, s32 mode, s32 index)
     HSD_SisLib_803A6368(text, (u8) index);
 }
 
-/// #mn_802308F0
+void mn_802308F0(HSD_GObj* gobj, int arg1, int arg2)
+{
+    struct mn_802307F8_t* data = HSD_GObjGetUserData(gobj);
+    u16 sel;
+    u8 kind;
+
+    if (arg1 != 0) {
+        sel = mn_804A04F0.hovered_selection;
+    } else {
+        sel = data->x1;
+    }
+    kind = sel;
+
+    switch (data->xA) {
+    case 2:
+    case 4:
+        if (data->text != NULL) {
+            HSD_SisLib_803A5CC4(data->text);
+            data->text = NULL;
+        }
+        break;
+    case 1:
+    case 3:
+        if (data->text == NULL) {
+            mn_802307F8((struct mn_802307F8_t*) data, kind,
+                        mn_804A04F0.confirmed_selection);
+        }
+        break;
+    case 0:
+        if (arg1 != 0 ||
+            (arg2 != 0 && (kind == 0 || kind == 2 || kind == 4)))
+        {
+            mn_802307F8((struct mn_802307F8_t*) data, kind,
+                        mn_804A04F0.confirmed_selection);
+        }
+        break;
+    case 5:
+        break;
+    }
+}
 
 /// #fn_802309F0
 

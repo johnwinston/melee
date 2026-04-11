@@ -149,6 +149,9 @@ typedef struct itKyasarin_ItemVars {
     /* +0  ip+DD4 */ char pad_0[0x20];
     /* +20 ip+DF4 */ HSD_GObj* x20;
     /* +24 ip+DF8 */ f32 x24;
+    /* +28 ip+DFC */ f32 x28;
+    /* +2C ip+E00 */ char pad_2C[0x34 - 0x2C];
+    /* +34 ip+E08 */ s32 x34;
 } itKyasarin_ItemVars;
 
 typedef struct itKyasarinAttributes {
@@ -156,11 +159,16 @@ typedef struct itKyasarinAttributes {
     /* +4  */ f32 x4;
     /* +8  */ f32 x8;
     /* +C  */ f32 xC;
-    /* +10 */ u8 x10_pad[0x28 - 0x10];
+    /* +10 */ u8 x10_pad[0x18 - 0x10];
+    /* +18 */ f32 x18;
+    /* +1C */ f32 x1C;
+    /* +20 */ u8 x20_pad[0x28 - 0x20];
     /* +28 */ f32 x28;
     /* +2C */ f32 x2C;
     /* +30 */ f32 x30;
     /* +34 */ f32 x34;
+    /* +38 */ f32 x38;
+    /* +3C */ f32 x3C;
 } itKyasarinAttributes;
 
 typedef struct itKyasarinEgg_ItemVars {
@@ -1105,6 +1113,8 @@ typedef struct itMewtwoShadowball_ItemVars {
     /* ip+E28 */ s32 x54;
     /* ip+E2C */ s32 x58;
     /* ip+E30 */ s32 x5C;
+    /* ip+E34 */ s32 x60;
+    /* ip+E38 */ f32 x64;
 } itMewtwoShadowball_ItemVars;
 
 typedef struct it_279D_DatAttrs {
@@ -1428,6 +1438,7 @@ typedef struct itOldottosea_ItemVars {
     /* 0x20 */ s32 x20;
     /* 0x24 */ s32 x24;
     /* 0x28 */ s32 x28;
+    /* 0x2C */ s16 x2C;
 } itOldottosea_ItemVars;
 
 typedef struct itPatapata_ItemVars {
@@ -1470,6 +1481,14 @@ typedef struct itPatapataAttributes {
 typedef struct itOldottoseaAttributes {
     /* 0x00 */ s32* x0;
     /* 0x04 */ f32 x4;
+    /* 0x08 */ f32 x8;
+    /* 0x0C */ f32 xC;
+    /* 0x10 */ u8 pad0[0x4];
+    /* 0x14 */ f32 x14;
+    /* 0x18 */ u8 pad1[0x4];
+    /* 0x1C */ f32 x1C;
+    /* 0x20 */ u8 pad2[0x4];
+    /* 0x24 */ f32 x24;
 } itOldottoseaAttributes;
 
 typedef struct itFreezerAttributes {
@@ -1585,7 +1604,10 @@ typedef struct itLugia_ItemVars {
 } itLugia_ItemVars;
 
 typedef struct itGreatFoxLaser_ItemVars {
-    /* +00 ip+DD4 */ u8 x0_pad[0x34];
+    /* +00 ip+DD4 */ u8 x0_pad[0x20];
+    /* +20 ip+DF4 */ HSD_GObj* x20;
+    /* +24 ip+DF8 */ u8 x24_pad[0x4];
+    /* +28 ip+DFC */ Vec3 x28;
     /* +34 ip+E08 */ s16 x34;
     /* +36 ip+E0A */ s16 x36;
     /* +38 ip+E0C */ UNK_T x38;

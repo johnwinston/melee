@@ -9,7 +9,9 @@ struct mn_802307F8_t {
     /* 0x000 */ u8 x0;
     /* 0x001 */ u8 x1;
     /* 0x002 */ u8 x2;
-    /* 0x003 */ u8 pad_3[0x12D];
+    /* 0x003 */ u8 x3_pad[0x00A-0x003];
+    /* 0x00A */ u8 xA;
+    /* 0x00B */ u8 xB_pad[0x130-0x00B];
     /* 0x130 */ HSD_Text* text;
 };
 
@@ -25,7 +27,7 @@ struct mn_80231634_t {
 /* 230198 */ UNK_RET mn_80230198(UNK_PARAMS);
 /* 230274 */ UNK_RET mn_80230274(UNK_PARAMS);
 /* 2307F8 */ void mn_802307F8(struct mn_802307F8_t*, s32, s32);
-/* 2308F0 */ UNK_RET mn_802308F0(UNK_PARAMS);
+/* 2308F0 */ void mn_802308F0(HSD_GObj*, int, int);
 /* 2309F0 */ UNK_RET fn_802309F0(UNK_PARAMS);
 /* 230D18 */ UNK_RET mn_80230D18(UNK_PARAMS);
 /* 230E38 */ HSD_GObj* mn_80230E38(int);

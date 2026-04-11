@@ -29,7 +29,7 @@ typedef struct {
     s32 x3C;
     s32 x40;
     s32 x44;
-    u8 _pad2[0x4];
+    f32 x48;
     f32 x4C;
 } itHitodemanAttributes;
 
@@ -172,7 +172,49 @@ void it_802D4990(Item_GObj* gobj)
     ip->on_accessory = it_802D4B50;
 }
 
-/// #itHitodeman_UnkMotion1_Anim
+bool itHitodeman_UnkMotion1_Anim(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    f32 timer;
+
+    if (ip->xDAC_itcmd_var0 != 0) {
+        return true;
+    }
+
+    timer = ip->xDD4_itemVar.hitodeman.x8C - 1.0F;
+    ip->xDD4_itemVar.hitodeman.x8C = timer;
+
+    if (timer < 0.0F) {
+        if (--ip->xDD4_itemVar.hitodeman.x88 < 0) {
+            return true;
+        }
+
+        ip->xDD4_itemVar.hitodeman.x8C =
+            ((itHitodemanAttributes*)
+                 ip->xC4_article_data->x4_specialAttributes)
+                ->x3C;
+
+        if (ip->xDD4_itemVar.hitodeman.x90 != NULL) {
+            itHitodemanAttributes* attrs =
+                ip->xC4_article_data->x4_specialAttributes;
+            ip->x40_vel.x = -ip->facing_dir * attrs->x48;
+            it_802D4C74(gobj);
+            ip->xDB0_itcmd_var1 = 1;
+        }
+    }
+
+    if (!it_80272C6C(gobj)) {
+        ip = GET_ITEM(gobj);
+        Item_80268E5C(gobj, 1, ITEM_ANIM_UPDATE);
+        ip->entered_hitlag = efLib_PauseAll;
+        ip->exited_hitlag = efLib_ResumeAll;
+        ip->on_accessory = it_802D4B50;
+    }
+
+    PAD_STACK(8);
+
+    return false;
+}
 
 void itHitodeman_UnkMotion1_Phys(Item_GObj* gobj)
 {
