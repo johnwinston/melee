@@ -1892,7 +1892,16 @@ bool gm_80164840(u8 ckind)
     return false;
 }
 
-/// #gm_80164910
+void gm_80164910(int arg0)
+{
+    u16* temp_r31 = gmMainLib_8015ED8C();
+    u8 var = lbl_803B78A4[(u8) arg0];
+    u8 idx = fn_801605EC(var);
+    if (idx != NUM_UNLOCKABLE_CHARACTERS) {
+        gmMainLib_8015D818(fn_80160710(idx));
+        *temp_r31 |= (u16) (1ULL << idx);
+    }
+}
 
 s32 gm_80164A0C(u8 arg0)
 {
