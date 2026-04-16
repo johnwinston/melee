@@ -4,6 +4,7 @@
 
 #include "baselib/sislib.h"
 #include "cm/camera.h"
+#include "gm/gmregclear.h"
 #include "gr/ground.h"
 #include "gr/grzakogenerator.h"
 #include "gr/inlines.h"
@@ -11,6 +12,7 @@
 #include "it/it_26B1.h"
 #include "lb/lb_00B0.h"
 #include "lb/lblanguage.h"
+#include "mp/mplib.h"
 
 f32 grHr_804D6AD8;
 int grHr_804D6ADC;
@@ -151,8 +153,7 @@ void grHomeRun_8021DF50(Ground_GObj* gobj)
             f32 y, z;
             HSD_Text* text;
 
-            gp->gv.unk.xC8 =
-                (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
+            gp->gv.unk.xC8 = (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
             lb_8000B1CC((HSD_JObj*) gp->gv.unk.xCC, NULL, &pos);
 
             scale = Ground_801C0498();
@@ -163,8 +164,7 @@ void grHomeRun_8021DF50(Ground_GObj* gobj)
 
             scale = Ground_801C0498();
             text = (HSD_Text*) gp->gv.unk.xC8;
-            text->pos_x =
-                pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
+            text->pos_x = pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
             text->pos_y = y;
             text->pos_z = z;
         }
@@ -217,8 +217,7 @@ void grHomeRun_8021E0D4(Ground_GObj* gobj)
             f32 y, z;
             HSD_Text* text;
 
-            gp->gv.unk.xC8 =
-                (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
+            gp->gv.unk.xC8 = (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
             lb_8000B1CC((HSD_JObj*) gp->gv.unk.xCC, NULL, &pos);
 
             scale = Ground_801C0498();
@@ -229,8 +228,7 @@ void grHomeRun_8021E0D4(Ground_GObj* gobj)
 
             scale = Ground_801C0498();
             text = (HSD_Text*) gp->gv.unk.xC8;
-            text->pos_x =
-                pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
+            text->pos_x = pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
             text->pos_y = y;
             text->pos_z = z;
         }
@@ -283,8 +281,7 @@ void grHomeRun_8021E258(Ground_GObj* gobj)
             f32 y, z;
             HSD_Text* text;
 
-            gp->gv.unk.xC8 =
-                (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
+            gp->gv.unk.xC8 = (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
             lb_8000B1CC((HSD_JObj*) gp->gv.unk.xCC, NULL, &pos);
 
             scale = Ground_801C0498();
@@ -295,8 +292,7 @@ void grHomeRun_8021E258(Ground_GObj* gobj)
 
             scale = Ground_801C0498();
             text = (HSD_Text*) gp->gv.unk.xC8;
-            text->pos_x =
-                pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
+            text->pos_x = pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
             text->pos_y = y;
             text->pos_z = z;
         }
@@ -349,8 +345,7 @@ void grHomeRun_8021E3DC(Ground_GObj* gobj)
             f32 y, z;
             HSD_Text* text;
 
-            gp->gv.unk.xC8 =
-                (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
+            gp->gv.unk.xC8 = (int) grHomeRun_8021EC58(gp->gv.homerun.xC6);
             lb_8000B1CC((HSD_JObj*) gp->gv.unk.xCC, NULL, &pos);
 
             scale = Ground_801C0498();
@@ -361,8 +356,7 @@ void grHomeRun_8021E3DC(Ground_GObj* gobj)
 
             scale = Ground_801C0498();
             text = (HSD_Text*) gp->gv.unk.xC8;
-            text->pos_x =
-                pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
+            text->pos_x = pos.x + (-1.0F) * (grHr_804D6AE4 * scale);
             text->pos_y = y;
             text->pos_z = z;
         }
@@ -394,7 +388,23 @@ void grHomeRun_8021E4FC(Ground_GObj* arg) {}
 
 /// #grHomeRun_8021E500
 
-/// #fn_8021E994
+void fn_8021E994(Ground* arg0, s32 arg1, CollData* coll, s32 arg3,
+                 mpLib_GroundEnum arg4, f32 arg5)
+{
+    s32 b1234 = coll->x34_flags.b1234;
+    HSD_GObj* gobj;
+    Ground* gp;
+
+    gobj = Ground_801C2BA4(0xA);
+    if (gobj == NULL || (gp = (Ground*) gobj->user_data) == NULL) {
+        return;
+    }
+    if (b1234 == 1 && coll->x0_gobj == (HSD_GObj*) gm_80180AF4() && arg4 == 1)
+    {
+        gp->gv.homerun.xE8_b0 = 1;
+    }
+    PAD_STACK(8);
+}
 
 void grHomeRun_8021EA30(f32* pos)
 {
@@ -413,7 +423,7 @@ void grHomeRun_8021EA30(f32* pos)
     }
 
     if (lbLang_IsSavedLanguageUS()) {
-        result = (f32)(result * 0.304788);
+        result = (f32) (result * 0.304788);
     }
 
     stage_info.x6E0 = 100.0F * result;

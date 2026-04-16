@@ -1348,10 +1348,24 @@ struct grPushOn_GroundVars {
 };
 
 struct grHomeRun_GroundVars {
-    u16 xC4;
-    u16 xC6;
-    int xC8;
-    int xCC;
+    /* +00 gp+C4 */ u16 xC4;
+    /* +02 gp+C6 */ u16 xC6;
+    /* +04 gp+C8 */ int xC8;
+    /* +08 gp+CC */ int xCC;
+    /* +0C gp+D0 */ u8 pad_D0[0x18];
+    /* +24 gp+E8 */ union {
+        u8 xE8;
+        struct {
+            u8 xE8_b0 : 1;
+            u8 xE8_b1 : 1;
+            u8 xE8_b2 : 1;
+            u8 xE8_b3 : 1;
+            u8 xE8_b4 : 1;
+            u8 xE8_b5 : 1;
+            u8 xE8_b6 : 1;
+            u8 xE8_b7 : 1;
+        };
+    };
 };
 
 struct Map_GroundVars {
