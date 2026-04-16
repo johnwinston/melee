@@ -3,6 +3,7 @@
 #include "mnmain.h"
 
 #include "gm/gm_1A3F.h"
+#include "mn/types.h"
 
 #include <sysdolphin/baselib/gobj.h>
 #include <sysdolphin/baselib/gobjplink.h>
@@ -45,7 +46,52 @@ extern StaticModelDesc MenMainCursorSs_Top;
 
 /// #mn_8022FEC8
 
-/// #mn_80230198
+AnimLoopSettings mn_803EC734[5] = {
+    { 0.0F, 3.0F, -0.1F },  { 20.0F, 23.0F, -0.1F }, { 40.0F, 43.0F, -0.1F },
+    { 60.0F, 63.0F, -0.1F }, { 80.0F, 83.0F, -0.1F },
+};
+
+AnimLoopSettings mn_803EC770[9] = {
+    { 100.0F, 103.0F, -0.1F }, { 120.0F, 123.0F, -0.1F },
+    { 140.0F, 143.0F, -0.1F }, { 160.0F, 163.0F, -0.1F },
+    { 180.0F, 183.0F, -0.1F }, { 30.0F, 49.0F, -0.1F },
+    { 70.0F, 89.0F, -0.1F },   { 90.0F, 109.0F, -0.1F },
+    { 50.0F, 69.0F, -0.1F },
+};
+
+void mn_80230198(UNK_T arg0, HSD_JObj* jobj, u8 mode)
+{
+    AnimLoopSettings* range;
+    f32 frame;
+    int i;
+    PAD_STACK(8);
+
+    switch (mode) {
+    case 0:
+    case 2:
+    case 4:
+        frame = mn_8022F298(jobj);
+        for (i = 0; i < 5; i++) {
+            range = &mn_803EC770[i];
+            if (mn_803EC770[i].start_frame <= frame &&
+                frame <= mn_803EC770[i].end_frame) {
+                break;
+            }
+            range = &mn_803EC734[i];
+            if (mn_803EC734[i].start_frame <= frame &&
+                frame <= mn_803EC734[i].end_frame) {
+                break;
+            }
+        }
+        mn_8022ED6C(jobj, range);
+        break;
+    case 1:
+    case 3:
+    case 5:
+    case 6:
+        break;
+    }
+}
 
 /// #mn_80230274
 
