@@ -56,7 +56,21 @@ bool it_802CB150(Item_GObj* gobj)
     return false;
 }
 
-/// #itMatadogas_UnkMotion1_Anim
+bool itMatadogas_UnkMotion1_Anim(Item_GObj* gobj)
+{
+    Item* item;
+    HSD_JObj* jobj;
+    PAD_STACK(8);
+    if (it_80272C6C(gobj) == 0) {
+        jobj = gobj->hsd_obj;
+        item = gobj->user_data;
+        Item_80268E5C(gobj, 0, ITEM_ANIM_UPDATE);
+        item->entered_hitlag = efLib_PauseAll;
+        item->exited_hitlag = efLib_ResumeAll;
+        HSD_JObjSetRotationY(jobj, 0.0f);
+    }
+    return false;
+}
 
 void itMatadogas_UnkMotion1_Phys(Item_GObj* gobj) {}
 
