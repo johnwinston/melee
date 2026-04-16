@@ -832,13 +832,50 @@ f32 fn_80160F58(u8 ckind)
 
 /// #fn_80161C90
 
-/// #fn_80162068
+void fn_80162068(MatchEnd* arg0)
+{
+    int i;
+    int j;
+    MatchPlayerData* outer;
+    MatchPlayerData* inner;
+    struct FighterData* fighter;
+    u32 new_val;
+
+    for (i = 0; i < 4; i++) {
+        outer = &arg0->player_standings[i];
+        if (outer->slot_type == 3) {
+            continue;
+        }
+        fighter = GetPersistentFighterData(gm_80164024(outer->character_kind));
+        for (j = 0; j < 4; j++) {
+            inner = &arg0->player_standings[j];
+            if (i == j) {
+                continue;
+            }
+            if (inner->slot_type == 3) {
+                continue;
+            }
+            if (outer->kills[j] +
+                    fighter->fighter_kos[gm_80164024(inner->character_kind)] >
+                0xFFFF)
+            {
+                new_val = 0xFFFF;
+            } else {
+                new_val =
+                    outer->kills[j] +
+                    fighter->fighter_kos[gm_80164024(inner->character_kind)];
+            }
+            fighter->fighter_kos[gm_80164024(inner->character_kind)] = new_val;
+        }
+        fn_80161C90(arg0, i, &fighter->sd_count);
+    }
+}
 
 /// #fn_80162170
 
 s32 gm_801623A4(MatchEnd* arg0)
 {
-    fn_80162068();
+    fn_80162068(arg0);
     return fn_80162170(arg0);
 }
 
