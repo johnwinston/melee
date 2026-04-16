@@ -887,7 +887,48 @@ void ifStatus_802F6E3C(s32 player_num)
 
 /// #ifStatus_802F6EA4
 
-/// #ifStatus_802F7034
+void ifStatus_802F7034(UNK_T arg0)
+{
+    lbl_8046B6A0_t* big_thing;
+    int v0;
+    int v1;
+    int v2;
+
+    big_thing = gm_8016AE38();
+
+    if (big_thing->unk_10 != 0) {
+        v0 = big_thing->unk_10 - 1;
+    } else {
+        v0 = -1;
+    }
+
+    if (big_thing->unk_14 != 0) {
+        v1 = big_thing->unk_14 - 1;
+    } else {
+        v1 = -1;
+    }
+
+    if (big_thing->unk_18 != 0) {
+        v2 = big_thing->unk_18;
+    } else {
+        v2 = 0;
+    }
+
+    if (big_thing->unk_B != 0) {
+        ifStatus_802F6EA4(big_thing->unk_B - 1, v0, v1, v2, (Event) arg0,
+                          NULL);
+    } else if (big_thing->match_result == 1) {
+        ifStatus_802F6EA4(0, v0, v1, v2, (Event) arg0, NULL);
+    } else if (big_thing->x24C8.x5_1) {
+        if (big_thing->match_result == 6) {
+            ifStatus_802F6EA4(7, v0, v1, v2, (Event) arg0, NULL);
+        } else {
+            ifStatus_802F6EA4(6, v0, v1, v2, (Event) arg0, NULL);
+        }
+    } else {
+        ifStatus_802F6EA4(5, v0, v1, v2, (Event) arg0, NULL);
+    }
+}
 
 void ifStatus_802F7134(void)
 {
