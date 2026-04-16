@@ -16,7 +16,47 @@
 #include "mp/mpcoll.h"
 #include "sysdolphin/baselib/random.h"
 
-/// #it_802E2470
+extern const f32 it_804DD728;
+
+void it_802E2470(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    itOldottoseaAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
+    int int_dir;
+    PAD_STACK(8);
+
+    it_8027B730(gobj);
+    ip->facing_dir = it_8026B684(&ip->pos);
+    it_8027C56C(gobj, ip->facing_dir);
+
+    if (it_804DD728 == ip->facing_dir) {
+        int_dir = -1;
+    } else {
+        int_dir = 1;
+    }
+    mpCollSetFacingDir(&ip->x378_itemColl, int_dir);
+
+    ip->xD5C = 0;
+    ip->xDCC_flag.b3 = 0;
+    ip->xDC8_word.flags.x15 = 0;
+    it_8027542C(gobj);
+    it_80275270(gobj);
+    ip->xDC8_word.flags.x19 = 1;
+    ip->xDD4_itemVar.oldottosea.x28 = 1;
+    ip->xDD4_itemVar.oldottosea.x20 = NULL;
+
+    if (gm_8016AE80() == -1) {
+        ip->xDD4_itemVar.oldottosea.x2C = 0;
+    } else if (it_8026D324(It_Kind_Freeze) &&
+               HSD_Randi(attr->x28) == 0)
+    {
+        ip->xDD4_itemVar.oldottosea.x2C = 1;
+    } else {
+        ip->xDD4_itemVar.oldottosea.x2C = 0;
+    }
+
+    it_802E269C(gobj);
+}
 
 /// #it_2725_Logic8_DmgReceived
 

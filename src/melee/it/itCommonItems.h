@@ -1515,6 +1515,7 @@ typedef struct itOldottoseaAttributes {
     /* 0x1C */ f32 x1C;
     /* 0x20 */ u8 pad2[0x4];
     /* 0x24 */ f32 x24;
+    /* 0x28 */ s8 x28;
 } itOldottoseaAttributes;
 
 typedef struct itFreezerAttributes {
