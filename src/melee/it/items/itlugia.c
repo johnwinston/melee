@@ -1,5 +1,6 @@
 #include "itlugia.h"
 
+#include <math_ppc.h>
 #include <placeholder.h>
 #include <platform.h>
 
@@ -159,7 +160,22 @@ bool itLugia_UnkMotion3_Coll(Item_GObj* gobj)
     return false;
 }
 
-/// #it_802D1830
+void it_802D1830(Item_GObj* gobj)
+{
+    Item* ip = GET_ITEM(gobj);
+    itLugiaAttributes* attrs = ip->xC4_article_data->x4_specialAttributes;
+    f32 x18;
+    f32 dy;
+
+    Item_80268E5C(gobj, 4, ITEM_ANIM_UPDATE);
+    ip->entered_hitlag = efLib_PauseAll;
+    ip->exited_hitlag = efLib_ResumeAll;
+    dy = ip->pos.y - ip->xDD4_itemVar.lugia.x64.y;
+    x18 = attrs->x18;
+    ip->xDD4_itemVar.lugia.xE50.x =
+        -((-x18 + sqrtf_accurate(x18 * x18 - 8 * x18 * -dy)) / 2.0F);
+    PAD_STACK(16);
+}
 
 bool itLugia_UnkMotion4_Anim(Item_GObj* gobj)
 {
