@@ -18,24 +18,24 @@
 #include <baselib/random.h>
 
 static struct {
-    s16 x0;
-    s16 x2;
-    u8 x4[0x10];
-    f32 x14;
-    f32 x18;
-    u8 x1C[0x10];
-    s16 x2C;
-    s16 x2E;
-    s16 x30;
-    s16 x32;
-    s16 x34;
-    s16 x36;
-    s16 x38;
-    s16 x3A;
-    u8 x3C[0xC];
-    f32 x48;
-    s32 x4C;
-    s32 x50;
+    /* 0x00 */ s16 x0;
+    /* 0x02 */ s16 x2;
+    /* 0x04 */ u8 pad_04[0x10];
+    /* 0x14 */ f32 x14;
+    /* 0x18 */ f32 x18;
+    /* 0x1C */ u8 pad_1C[0x10];
+    /* 0x2C */ s16 x2C;
+    /* 0x2E */ s16 x2E;
+    /* 0x30 */ s16 x30;
+    /* 0x32 */ s16 x32;
+    /* 0x34 */ s16 x34;
+    /* 0x36 */ s16 x36;
+    /* 0x38 */ s16 x38;
+    /* 0x3A */ s16 x3A;
+    /* 0x3C */ u8 pad_3C[0xC];
+    /* 0x48 */ f32 x48;
+    /* 0x4C */ s32 x4C;
+    /* 0x50 */ s32 x50;
 }* grOk_804D6A90;
 
 StageCallbacks grOk_803E658C[4] = {
@@ -220,6 +220,10 @@ extern f32 grOk_804DBA14;
 extern f32 grOk_804DBA18;
 extern f32 grOk_804DBA1C;
 
+// HSD_ASSERT in grOldKongo_80210650 below passes __FILE__ to __assert.
+// The original binary references the pre-existing "groldkongo.c" string
+// at grOk_803E6640; point __FILE__ at that symbol so the relocation
+// matches exactly rather than pulling in a fresh string-literal copy.
 extern char grOk_803E6640[];
 #undef __FILE__
 #define __FILE__ grOk_803E6640
@@ -240,46 +244,24 @@ f32 grOldKongo_80210650(void)
         r = 0;
     }
 
-    r -= grOk_804D6A90->x2C;
-    if (r < 0) {
+    if ((r -= grOk_804D6A90->x2C) < 0) {
         result = grOk_804DBA04;
+    } else if ((r -= grOk_804D6A90->x2E) < 0) {
+        result = grOk_804DBA08;
+    } else if ((r -= grOk_804D6A90->x30) < 0) {
+        result = grOk_804DBA0C;
+    } else if ((r -= grOk_804D6A90->x32) < 0) {
+        result = grOk_804DB9CC;
+    } else if ((r -= grOk_804D6A90->x34) < 0) {
+        result = grOk_804DBA10;
+    } else if ((r -= grOk_804D6A90->x36) < 0) {
+        result = grOk_804DBA14;
+    } else if ((r -= grOk_804D6A90->x38) < 0) {
+        result = grOk_804DBA18;
+    } else if ((r -= grOk_804D6A90->x3A) < 0) {
+        result = grOk_804DBA1C;
     } else {
-        r -= grOk_804D6A90->x2E;
-        if (r < 0) {
-            result = grOk_804DBA08;
-        } else {
-            r -= grOk_804D6A90->x30;
-            if (r < 0) {
-                result = grOk_804DBA0C;
-            } else {
-                r -= grOk_804D6A90->x32;
-                if (r < 0) {
-                    result = grOk_804DB9CC;
-                } else {
-                    r -= grOk_804D6A90->x34;
-                    if (r < 0) {
-                        result = grOk_804DBA10;
-                    } else {
-                        r -= grOk_804D6A90->x36;
-                        if (r < 0) {
-                            result = grOk_804DBA14;
-                        } else {
-                            r -= grOk_804D6A90->x38;
-                            if (r < 0) {
-                                result = grOk_804DBA18;
-                            } else {
-                                r -= grOk_804D6A90->x3A;
-                                if (r < 0) {
-                                    result = grOk_804DBA1C;
-                                } else {
-                                    HSD_ASSERT(786, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        HSD_ASSERT(786, 0);
     }
 
     return result;
