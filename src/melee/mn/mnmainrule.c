@@ -10,6 +10,7 @@
 #include <sysdolphin/baselib/gobjproc.h>
 #include <sysdolphin/baselib/sislib.h>
 #include <melee/gm/gmmain_lib.h>
+#include <melee/lb/lb_00F9.h>
 #include <melee/lb/lbarchive.h>
 #include <melee/lb/lbaudio_ax.h>
 #include <melee/sc/types.h>
@@ -167,7 +168,32 @@ void mn_802308F0(HSD_GObj* gobj, int arg1, int arg2)
 
 /// #fn_802309F0
 
-/// #mn_80230D18
+extern s32 mn_804D6BD4;
+
+void mn_80230D18(struct mn_802307F8_t* arg0, HSD_JObj* arg1, int arg2)
+{
+    int i;
+
+    arg0->x0 = mn_804A04F0.cur_menu;
+    arg0->x1 = mn_804A04F0.hovered_selection;
+    arg0->x4 = gmMainLib_8015CC34()->handicap;
+    if (mn_804D6BD4 == 0 && arg0->x4 == 1) {
+        arg0->x4 = 0;
+    }
+    arg0->x5 = gmMainLib_8015CC34()->damage_ratio;
+    arg0->x6 = gmMainLib_8015CC34()->unk_x7;
+    arg0->x2 = gmMainLib_8015CC34()->mode;
+    arg0->x9 = gmMainLib_8015CC34()->stock_count;
+    arg0->x3 = gmMainLib_8015CC34()->time_limit;
+    if (gm_801A4310() == 0x1B && arg0->x3 == 0) {
+        arg0->x3 = 99;
+    }
+    arg0->xA = arg2;
+    arg0->text = NULL;
+    for (i = 0; i < 10; i++) {
+        lb_80011E24(arg1, &arg0->jobjs[i], i, -1);
+    }
+}
 
 /// #mn_80230E38
 

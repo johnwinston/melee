@@ -9,9 +9,16 @@ struct mn_802307F8_t {
     /* 0x000 */ u8 x0;
     /* 0x001 */ u8 x1;
     /* 0x002 */ u8 x2;
-    /* 0x003 */ u8 x3_pad[0x00A-0x003];
+    /* 0x003 */ u8 x3;
+    /* 0x004 */ u8 x4;
+    /* 0x005 */ u8 x5;
+    /* 0x006 */ u8 x6;
+    /* 0x007 */ u8 x7_pad[0x009 - 0x007];
+    /* 0x009 */ u8 x9;
     /* 0x00A */ u8 xA;
-    /* 0x00B */ u8 xB_pad[0x130-0x00B];
+    /* 0x00B */ u8 xB_pad;
+    /* 0x00C */ HSD_JObj* jobjs[10];
+    /* 0x034 */ u8 x34_pad[0x130 - 0x034];
     /* 0x130 */ HSD_Text* text;
 };
 
@@ -29,7 +36,7 @@ struct mn_80231634_t {
 /* 2307F8 */ void mn_802307F8(struct mn_802307F8_t*, s32, s32);
 /* 2308F0 */ void mn_802308F0(HSD_GObj*, int, int);
 /* 2309F0 */ UNK_RET fn_802309F0(UNK_PARAMS);
-/* 230D18 */ UNK_RET mn_80230D18(UNK_PARAMS);
+/* 230D18 */ void mn_80230D18(struct mn_802307F8_t*, HSD_JObj*, int);
 /* 230E38 */ HSD_GObj* mn_80230E38(int);
 /* 231634 */ int mn_80231634(struct mn_80231634_t*);
 /* 23164C */ void mn_8023164C(void);
