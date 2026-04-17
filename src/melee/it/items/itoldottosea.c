@@ -58,7 +58,35 @@ void it_802E2470(Item_GObj* gobj)
     it_802E269C(gobj);
 }
 
-/// #it_2725_Logic8_DmgReceived
+bool it_2725_Logic8_DmgReceived(Item_GObj* gobj)
+{
+    Item* ip = gobj->user_data;
+    itOldottoseaAttributes* attr = ip->xC4_article_data->x4_specialAttributes;
+    PAD_STACK(16);
+
+    ip->init_facing_dir = ip->facing_dir;
+    ip->xC9C = (s32) ((f32) ip->xC9C + it_8027CBFC(gobj));
+
+    if (ip->xC9C > *attr->x0 || ip->msid == 9) {
+        if ((u32) ip->xDD4_itemVar.oldottosea.x20 != 0U) {
+            it_8028ECE0((HSD_GObj*) ip->xDD4_itemVar.oldottosea.x20);
+            it_802E37A4(gobj);
+        }
+        it_8027C9D8(ip);
+        it_802756D0(gobj);
+        it_80275474(gobj);
+        it_8027CE44(gobj);
+        Camera_80030E44(2, &ip->pos);
+        if (HSD_Randf() < it_804D6D40[2]) {
+            it_802E3528(gobj);
+        } else {
+            it_802E3400(gobj);
+        }
+    } else {
+        it_802E2C80(gobj);
+    }
+    return false;
+}
 
 void it_802E269C(Item_GObj* gobj)
 {
